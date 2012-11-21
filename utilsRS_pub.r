@@ -2,6 +2,10 @@
 len <- length
 p<-paste0
 
+testingGitConnex <- function() {
+  lastUpdate <- "Wed Nov 21 10:39:35 2012"
+  return(lastUpdate)
+}
 
 JavaTest <- function(stopRun=TRUE, runInit=TRUE) {
   ## ensures that rJava is up and running.  If Java is NOT running and...
