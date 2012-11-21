@@ -1,6 +1,6 @@
 # useful shorthand
 len <- length
-p<-paste0
+p <- paste0
 
 testingGitConnex <- function() {
   lastUpdate <- "Wed Nov 21 10:39:35 2012"
