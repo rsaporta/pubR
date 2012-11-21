@@ -3,7 +3,7 @@ len <- length
 p <- paste0
 
 testingGitConnex <- function() {
-  lastUpdate <- "Wed Nov 21 10:39:35 2012"
+  lastUpdate <- "Wed Nov 21 15:48:37 2012"
   return(lastUpdate)
 }
 
