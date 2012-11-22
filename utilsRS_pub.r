@@ -790,23 +790,25 @@ asCurr <- function(x, decim=2, noSpacesAfterSymb=1, symbol="$") {
   return(noquote(paste0(symbol, spaces, xStr, deciDigsStr)))
 }  # END asCurr
 
-# TODO:  fix this function
-listPacker <- function(receiver, ...)  {
-stop("function listPacker does not yet work for more than 2+ arguments")
+
+lP <- listPacker <- function(receiver, ...)  {
   # takes all arguments (...) and appends them to receiver
   #
   # receiver should be list-like
   #  value returned is list-like 
 
-  if (length(list(...)) > 0L) {
-    receiver[length(receiver) + 1L] <- ..1
-    if (length(list(...)) > 1L)  {
-        receiver <- listPacker(receiver, list(...)[-1L])    
-    }
-  } else {
-    warning("There were nothing to add to the list.")
-  }
-  receiver
+  return(c(receiver, list(...)))
+
+  # TODO:  Decide if any of this is still useful, else chuck it. 
+        # if (length(list(...)) > 0L) {
+        #   receiver[length(receiver) + 1L] <- ..1
+        #   if (length(list(...)) > 1L)  {
+        #       receiver <- listPacker(receiver, list(...)[-1L])    
+        #   }
+        # } else {
+        #   warning("There were nothing to add to the list.")
+        # }
+        # receiver
 }
 
   
