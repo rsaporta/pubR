@@ -390,7 +390,7 @@ as.path <- function(..., fsep=.Platform$file.sep, expand=TRUE) {
   return(path.expand(do.call(file.path, c(cleaned, fsep=fsep))))
 }
 
-dosDir <- function(wrkDir, gitData=FALSE) {
+dosDir <- function(wrkDir, gitData=FALSE, mkdir=TRUE) {
   # makes data, out, src directory inside the directory wrkDir
   #   and creates variables with full path to these directories
   #   in the parent environment  (the environment that called this func) 
@@ -406,14 +406,15 @@ dosDir <- function(wrkDir, gitData=FALSE) {
   if (gitData)
     vals[[1]] <- sub("/git/", "/gitData/", eval(vals[[1]], envir=parent.frame()))
 
-  # create directories if they do not exist
-  sapply(path.expand(vals), dir.create, showWarnings=F)
+  # if flagged, create directories if they do not exist
+  if (mkdir)
+    sapply(path.expand(vals), dir.create, showWarnings=F)
 
   # assign vals to appropriate var names in the calling environment                  
   mapply(assign, vars, vals, MoreArgs=c(pos=parent.frame()))
 
 }
-## NOTE: also copied to writeArtistInfo.. 
+
 makeDictFromCSV <- function(csvFile)  {
   # Creates a dictionary out of a CSV file where 
   #    col1 of the CSV are the keys and col2 are the values.
