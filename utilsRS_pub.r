@@ -2,11 +2,6 @@
 len <- length
 p <- paste0
 
-testingGitConnex <- function() {
-  lastUpdate <- "Wed Nov 21 15:48:37 2012"
-  return(lastUpdate)
-}
-
 JavaTest <- function(stopRun=TRUE, runInit=TRUE) {
   ## ensures that rJava is up and running.  If Java is NOT running and...
   ##    stopRun=T, will throw an error. If stop=False, will throw a warning.
@@ -30,7 +25,7 @@ JavaTest <- function(stopRun=TRUE, runInit=TRUE) {
   }
 }
 
-isErr <- function(expression){
+isErr <- function(expression)  {
   #  Boolean; Tries to evaluate the expresion; returns T if an error is thrown
   #  Args:
   #    expression:  Make sure to use expression() to pass an expression (dont use Strings)
@@ -38,7 +33,7 @@ isErr <- function(expression){
   #    T if expression throws an Error // F if expression is evaluated without error
   #    NOTE:  The actual evaluation of the expression is NOT RETURNED
   
-	return( class(try(eval(expression), silent=T))=="try-error" )
+  return( class(try(eval(expression), silent=T))=="try-error" )
 }
 
 
@@ -370,7 +365,7 @@ insert <- function(lis, obj, pos=0, objIsMany=FALSE) {
 }
 
 
-as.path <- function(..., fsep=.Platform$file.sep) {
+as.path <- function(..., fsep=.Platform$file.sep, expand=TRUE) {
 
   ## If starts with fsep, we will preserve it.
   startWith <- ifelse(substr(..1,1,1) == fsep, fsep, "")
@@ -390,9 +385,34 @@ as.path <- function(..., fsep=.Platform$file.sep) {
   # put back any starting fsep
   cleaned[[1]] <- paste0(startWith,cleaned[[1]])
 
+  if (!expand)
+      return(do.call(file.path, c(cleaned, fsep=fsep)))
   return(path.expand(do.call(file.path, c(cleaned, fsep=fsep))))
 }
 
+dosDir <- function(wrkDir, gitData=FALSE) {
+  # makes data, out, src directory inside the directory wrkDir
+  #   and creates variables with full path to these directories
+  #   in the parent environment  (the environment that called this func) 
+  # 
+
+  grp <- list("data", "out", "src")
+
+  # create vars (+'Dir') and vals (paths)
+  vars <- paste0(grp, "Dir")
+  vals <- mapply(as.path, wrkDir, grp, MoreArgs=list(expand=F), USE.NAMES=F)
+
+  # if flagged, data dir will be in different directory
+  if (gitData)
+    vals[[1]] <- sub("/git/", "/gitData/", eval(vals[[1]], envir=parent.frame()))
+
+  # create directories if they do not exist
+  sapply(path.expand(vals), dir.create, showWarnings=F)
+
+  # assign vals to appropriate var names in the calling environment                  
+  mapply(assign, vars, vals, MoreArgs=c(pos=parent.frame()))
+
+}
 ## NOTE: also copied to writeArtistInfo.. 
 makeDictFromCSV <- function(csvFile)  {
   # Creates a dictionary out of a CSV file where 
@@ -533,6 +553,11 @@ qy <- quity <- function(dir='~/')  {
   quit('yes')
 }
 
+tbs <- function(n)  {
+  # returns a string of n-many tabs, concatenated together
+  return(paste0(rep("\t", n), collapse=""))  
+}
+
 miniframe <- function(data, rows=200)  {
   ## returns a dataframe similar to data but with a randomly selected rows 
   miniLength <- 200
@@ -587,35 +612,35 @@ makeDictWithIntegerKeys <- function(KVraw, applyLabels=TRUE)  {
   
   
 chkp <-chkpt <- function(logStr, chkpOn=TRUE, final=FALSE) {
- 	# Logs the string to the console for checkpointing & troubleshooting
- 	# Args:
- 	#	logStr:  a string that will be logged to stdout
- 	#	chkpOn:	 If FALSE, then logging does not occur. (for quickly turning chkp on/off)
- 	# 
- 	# Returns Null
- 	
- 	if (chkpOn) {
- 		if (nchar(logStr)<3)
- 			logStr <- paste0("\t\t  ",logStr)
- 		else if (nchar(logStr)<12)
- 			logStr <- paste0("\t\t",logStr)
- 		else if (nchar(logStr)<15)
- 			logStr <- paste0("\t",logStr)
- 		else if (nchar(logStr)<17)
- 			logStr <- paste0("  ",logStr)
-		else if (nchar(logStr)<20)
- 			logStr <- paste0(" ",logStr)
+  # Logs the string to the console for checkpointing & troubleshooting
+  # Args:
+  # logStr:  a string that will be logged to stdout
+  # chkpOn:  If FALSE, then logging does not occur. (for quickly turning chkp on/off)
+  # 
+  # Returns Null
+  
+  if (chkpOn) {
+    if (nchar(logStr)<3)
+      logStr <- paste0("\t\t  ",logStr)
+    else if (nchar(logStr)<12)
+      logStr <- paste0("\t\t",logStr)
+    else if (nchar(logStr)<15)
+      logStr <- paste0("\t",logStr)
+    else if (nchar(logStr)<17)
+      logStr <- paste0("  ",logStr)
+    else if (nchar(logStr)<20)
+      logStr <- paste0(" ",logStr)
 
-		#log
- 		cat(paste0("\t\t",
- 				  ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
- 	}
- 	
- 	if (final) {
- 		cat("\n\n")  #for cleanliness
- 	}
+    #log
+    cat(paste0("\t\t",
+          ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
+  }
+  
+  if (final) {
+    cat("\n\n")  #for cleanliness
+  }
 
- 	return()
+  return()
 }
 
  
@@ -868,6 +893,22 @@ homesource <- function(file, dir="~/"){
 }
 
 
+## ---------------------------------------------##
+##                 FUNC FORM                    ##
+##               FOR SOURCING URLS              ##
+##       note the difference in envir=(.)       ##
+##                                              ##
+## ---------------------------------------------##
+
+source.url <- function(...) {
+ # load package
+ require(RCurl)
+
+ urls <- list(...)
+ eval(parse(text=getURL(urls, followlocation=TRUE, cainfo=system.file("CurlSSL", "cacert.pem", package="RCurl"))),
+      envir=parent.frame(1))
+}
+## ---------------------------------------------##
 
 
 
