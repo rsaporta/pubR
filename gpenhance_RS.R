@@ -32,7 +32,7 @@ ggtext <- function(txt, Title=NULL, x=50, y=50, size=3)  {
       theme(panel.border = none) +
 
       # plot the text
-      annotate("text", x=x, y=y, label=txt, size=size) 
+      annotate("text", x=x, y=y, label=txt, size=size, hjust=0) 
 
 }
 
