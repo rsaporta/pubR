@@ -1,15 +1,40 @@
-## ggplot2 enhancements.R
+## gpenhance_RS.R
 
 
-################
+
+
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##
-##  These are a collection of enhancements to the ggplot2 package. 
-## 
+##     ggtext:   Plots a character object within plot bounds
+##
 
-##  Included Here: 
-##    qqplot    (aka qq)
-##    multiplot
+ggtext <- function(txt, Title=NULL, x=50, y=50, size=3)  {
 
+    # basic params used for setting plot
+    dat <- data.frame(x=c(0, 100), y=c(0, 100))
+    none <- element_blank()
+
+    # plot
+    ggplot(dat) + 
+      # remove axis, and scale at [0:100]
+      scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks=NULL) +
+      scale_x_continuous(limits = c(0, 100), expand = c(0, 0), breaks=NULL) +
+      ylab(NULL) + xlab(NULL) + 
+
+      # title the plot
+      ggtitle(Title)  + 
+
+      # clean up the plot background 
+      theme_bw() +
+      theme(panel.grid.major = none, panel.grid.minor = none) + 
+      theme(legend.position = "none") +
+      theme(panel.background = none) + 
+      theme(panel.border = none) +
+
+      # plot the text
+      annotate("text", x=x, y=y, label=txt, size=size) 
+
+}
 
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
