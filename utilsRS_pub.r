@@ -1,3 +1,6 @@
+# for broken keyboard with no \ key
+nl <- "\n"
+
 # useful shorthand
 len <- length
 p <- paste0
@@ -414,6 +417,24 @@ dosDir <- function(wrkDir, gitData=FALSE, mkdir=TRUE) {
   mapply(assign, vars, vals, MoreArgs=c(pos=parent.frame()))
 
 }
+ 
+
+rmDupLines <- function(obj)  {
+  # removes duplicate lines from obj and returns the modified object.
+  # especially useful for captured output of summary.lm() 
+  if (is.null(dim(obj)))
+    return(obj[!sapply(seq(obj)[-1L], function(i) obj[[i]]==obj[[i-1]])])
+
+  return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
+}
+
+
+cordl <- function(...)  {
+  # Capture Output, Remove Duplicate Lines, wrapper function. 
+  rmDupLines(capture.output(...))
+}
+
+
 
 makeDictFromCSV <- function(csvFile)  {
   # Creates a dictionary out of a CSV file where 
@@ -789,7 +810,6 @@ asCurr <- function(x, decim=2, noSpacesAfterSymb=1, symbol="$") {
 
   return(noquote(paste0(symbol, spaces, xStr, deciDigsStr)))
 }  # END asCurr
-
 
 lP <- listPacker <- function(receiver, ...)  {
   # takes all arguments (...) and appends them to receiver

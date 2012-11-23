@@ -8,11 +8,26 @@
 ##     ggtext:   Plots a character object within plot bounds
 ##
 
-ggtext <- function(txt, Title=NULL, x=50, y=50, size=3)  {
+ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, useMono=FALSE)  {
+  # Arguments: 
+  #   txt:  the text to output
+  #   x, y: location of where to plot. Values are 0:100
+  #   s:    size of text
+  #   h, v: justification for horizontal & vertical
+  #   useMono: Boolean flag.  If T, use a fixed-with font.     
+
+    ## ADJUST THE TEXT
+        # Collapse if multi-lined
+        txt <- paste(txt, collapse = "\n", sep = "")
+        
+        # Replace tabs with spaces
+        # From gplots:
+        # txt <- replaceTabs(txt, width = tab.width)
 
     # basic params used for setting plot
     dat <- data.frame(x=c(0, 100), y=c(0, 100))
     none <- element_blank()
+    fam <- ifelse(useMono, "mono", "serif")   # based on flag set by call to function
 
     # plot
     ggplot(dat) + 
@@ -32,9 +47,12 @@ ggtext <- function(txt, Title=NULL, x=50, y=50, size=3)  {
       theme(panel.border = none) +
 
       # plot the text
-      annotate("text", x=x, y=y, label=txt, size=size, hjust=0) 
+      annotate("text", x=x, y=y, label=txt, family=fam, size=s, hjust=h, vjust=v) 
 
 }
+
+
+
 
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
