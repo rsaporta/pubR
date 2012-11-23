@@ -28,6 +28,13 @@
   vp.q4 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("right","bottom"))
 #--
 
+pgTitle <- function(txt, border=FALSE) {
+  ## put title at top of page
+        if (border)
+            grid.rect(y = 1, height = unit(1.1, "lines"), just = c("center", "top"))
+            
+        grid.text(txt, y = unit(1, "npc") - unit(0.65, "lines"), gp = gpar(font = 2))
+    }
 
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
@@ -35,13 +42,20 @@
 ##     ggtext:   Plots a character object within plot bounds
 ##
 
-ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, useMono=FALSE)  {
+
+ggtextbasic <- function(txt, mono=TRUE) {
+  ggtext(txt, s=2.5, x=0, y=0, useMono=mono)
+}
+
+
+ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, mono=FALSE, useMono=mono)  {
   # Arguments: 
   #   txt:  the text to output
   #   x, y: location of where to plot. Values are 0:100
   #   s:    size of text
   #   h, v: justification for horizontal & vertical
   #   useMono: Boolean flag.  If T, use a fixed-with font.     
+  #   mono:  a synonym for useMono
 
     ## ADJUST THE TEXT
         # Collapse if multi-lined
@@ -146,12 +160,9 @@ qqplot.data <- function (vec)  {
 # then plot 1 will go in the upper left, 2 will go in the upper right, and
 # 3 will go all the way across the bottom.
 #
-multiplot <- function(..., plotlist=NULL, file, cols=2, layout=NULL) {
+multiplot <- function(..., plotlist=NULL, file, cols=2, byrow=TRUE, layout=NULL) {
   require(grid)
 
-
-  ## TODO:  `plots` may not in fact be a list.  May need to be modified. 
-  # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
 
   numPlots = length(plots)
@@ -161,7 +172,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=2, layout=NULL) {
     # Make the panel
     # ncol: Number of columns of plots
     # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)), byrow=byrow,
                     ncol = cols, nrow = ceiling(numPlots/cols))
   }
 
