@@ -39,15 +39,22 @@ isErr <- function(expression)  {
   return( class(try(eval(expression), silent=T))=="try-error" )
 }
 
-showProg <- function(flag, outp, reset=FALSE, done=FALSE, t=1)  {
+showProg <- function(flag, outp, header=FALSE, done=FALSE, tb=1)  {
   # wrapper function for: 
   # if flag is true, then cat() outp. 
-  if (reset) 
-    cat ("========================\nProgress Indication....\n")
+
+  # put tabs after any line break
+  outp <- sub("\n", tbs(tb, T), outp)
+  
+  # If header or done: set tb to 0, unless user defined value
+  tb <- ifelse(missing(tb) && (header || done), 0, tb)
+
+  if (header) 
+    cat ("","========================","Progress Indication....", sep=tbs(tb,T))
   if (flag)
-    cat(tbs(t), outp, "\n", sep="")
+    cat(tbs(tb), outp, "\n", sep="")
   if (done) 
-    cat ("\n----------------\nProcess Complete\n========================\n")
+    cat ("", "----------------", "Process Complete", "========================", sep=tbs(tb,T))
 } 
 
 ###############################################################
@@ -585,9 +592,10 @@ qy <- quity <- function(dir='~/')  {
   quit('yes')
 }
 
-tbs <- function(n)  {
+tbs <- function(n, nl=FALSE)  {
   # returns a string of n-many tabs, concatenated together
-  return(paste0(rep("\t", n), collapse=""))  
+  # if nl=T, will preface with a new line char.
+  return(paste0(ifelse(nl, "\n", ""), paste0(rep("\t", n), collapse="")))  
 }
 
 miniframe <- function(data, rows=200)  {
@@ -751,6 +759,19 @@ plength <- printlength <- function(opt=200) {
 ## Returns the value returned by the options call, which is the previous max.print setting
   return(options("max.print" = opt))
 }
+
+
+reminder <- function() {
+## function to remind which op is which. 
+  cat ("SINGLE: \n")
+  cat("c(T, F, T)  &  c(T, F, T) = ",
+      c(T, F, T)  &  c(T, F, T), "\n\n")
+
+  cat ("DOUBLE: \n")
+  cat("c(T, F, T)  &&  c(T, F, T) = ",
+      c(T, F, T)  &&  c(T, F, T), "\n")
+}
+
 
 saveToFile_TabDelim <- function(obj, directory=getwd())  {
   ## saves obj as a .csv file of  
