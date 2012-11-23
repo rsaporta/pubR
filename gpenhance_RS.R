@@ -1,5 +1,32 @@
-## gpenhance_RS.R
+## ggplot2 enhancements.R
 
+
+################
+##
+##  These are a collection of enhancements to the ggplot2 package. 
+## 
+
+##  Included Here: 
+##    qqplot    (aka qq)
+##    multiplot
+
+
+
+
+
+
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+##
+##     Viewports for layout design;  for use with print
+##
+
+  # q1, q2, q3, q4  are the cartesian quadrants for a 2x2 grid
+
+  vp.q1 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("right","top"))
+  vp.q2 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("left","top"))
+  vp.q3 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("left","bottom"))
+  vp.q4 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("right","bottom"))
+#--
 
 
 
@@ -57,24 +84,28 @@ ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, useMono=FALSE)  {
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##
-## SOURCE:  http://stackoverflow.com/questions/4357031/qqnorm-and-qqline-in-ggplot2
 ##
 ##
-qq     <- function(...) UseMethod("qqplot")
+     ggtext:   Plots a character object within plot boundsqq     <- function(...) UseMethod("qqplot")
 qqplot <- function(...) UseMethod("qqplot")
 
 
-qqplot.lm <- function(LM) # argument: a linear model
-{
+qqplot.lm <- function(LM)  {
+# argument: a linear model
+
+    # following four lines from base R's qqline()
     y <- quantile(LM$resid[!is.na(LM$resid)], c(0.25, 0.75))
     x <- qnorm(c(0.25, 0.75))
     slope <- diff(y)/diff(x)
     int <- y[1L] - slope * x[1L]
 
+    # Create ggplot
     ggplot(LM) +
       aes(sample=.resid) +
       geom_abline(slope=slope, intercept=int, color="red", alpha=0.85) + 
-      stat_qq(alpha=0.5)
+      stat_qq(alpha=0.5) + 
+      ylab("Residuals") +
+      xlab("Theoretical")
 }
 
 
@@ -117,6 +148,8 @@ qqplot.data <- function (vec)  {
 multiplot <- function(..., plotlist=NULL, file, cols=2, layout=NULL) {
   require(grid)
 
+
+  ## TODO:  `plots` may not in fact be a list.  May need to be modified. 
   # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
 

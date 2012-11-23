@@ -39,6 +39,16 @@ isErr <- function(expression)  {
   return( class(try(eval(expression), silent=T))=="try-error" )
 }
 
+showProg <- function(flag, outp, reset=FALSE, done=FALSE)  {
+  # wrapper function for: 
+  # if flag is true, then cat() outp. 
+  if (reset) 
+    cat ("========================\nProgress Indication....\n")
+  if (flag)
+    cat("\t", outp, "\n", sep="")
+  if (done) 
+    cat ("\n----------------\nProcess Complete\n========================\n")
+} 
 
 ###############################################################
 ###########              LIST UTILITIES             ###########   
