@@ -441,15 +441,15 @@ rmDupLines <- function(obj, trim=T)  {
   # especially useful for captured output of summary.lm() 
   # trim only applies to vectors (ie, null dim)  
 
-  if (is.null(dim(obj)))
-    return(obj[!sapply(seq(obj)[-1L], function(i) obj[[i]]==obj[[i-1]])])
+  if (!is.null(dim(obj)))
+      return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
 
   if (trim) {
     blanks <- sapply(obj, identical, "", USE.NAMES=F)
     obj <- obj[min(which(!blanks)):max(which(!blanks))]
   }
-
-  return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
+  
+  return(obj[!sapply(seq(obj)[-1L], function(i) obj[[i]]==obj[[i-1]])])
 }
 
 
