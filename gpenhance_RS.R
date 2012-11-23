@@ -86,7 +86,8 @@ ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, useMono=FALSE)  {
 ##
 ##
 ##
-     ggtext:   Plots a character object within plot boundsqq     <- function(...) UseMethod("qqplot")
+
+qq     <- function(...) UseMethod("qqplot")
 qqplot <- function(...) UseMethod("qqplot")
 
 
