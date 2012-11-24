@@ -39,6 +39,21 @@ isErr <- function(expression)  {
   return( class(try(eval(expression), silent=T))=="try-error" )
 }
 
+isNumber <- function(x)  {
+# the purpose of this function is to avoid the warnings that 
+# come with `is.numeric(as.numeric(x))` when x is not a number.
+
+  if (is.list(x))
+    return(lapply(x, isNumber))
+
+  if (length(x) > 1)
+    return(sapply(x, isNumber))
+
+  ifelse (nchar(x) == attr(gregexpr("^[[:digit:]]*$", x)[[1]], "match.length"), 
+      is.numeric(as.numeric(x)), FALSE)
+
+}
+
 showProg <- function(flag, outp, header=FALSE, done=FALSE, tb=1)  {
   # wrapper function for: 
   # if flag is true, then cat() outp. 

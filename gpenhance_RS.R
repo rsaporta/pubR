@@ -1,46 +1,83 @@
 ## ggplot2 enhancements.R
 
 
-################
-##
-##  These are a collection of enhancements to the ggplot2 package. 
-## 
-
-##  Included Here: 
-##    qqplot    (aka qq)
-##    multiplot
-
+##############################################################################
+##+------------------------------------------------------------------------+##
+##                                                                          ##
+##       These are a collection of functions/wrappers for ggplot2.          ##
+##                                                                          ##
+##                                                                          ##                      
+##############################################################################
 
 
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+##                                                                                                       ##
+##                            Viewports for layout design;  for use with print                           ##
+##                                                                                                       ##
+##-------------------------------------------------------------------------------------------------------##
+                                                                                                        
+   # q1, q2, q3, q4  are the cartesian-like quadrants for a 2x2 grid, (q1 & q4 on the right).           
+
+   vp.q1 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 1.0, just = c("left","top"), name="vp.q2")     
+   vp.q2 <- viewport(width = 0.5, height = 0.5, x = 0.0, y = 1.0, just = c("left","top"), name="vp.q1")   
+ 
+   vp.q3 <- viewport(width = 0.5, height = 0.5, x = 0.0, y = 0.5, just = c("left","top"), name="vp.q3")
+   vp.q4 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("left","top"), name="vp.q4")
+##                                                                                                       ##
+##-------------------------------------------------------------------------------------------------------##
 
 
 
-##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-##
-##     Viewports for layout design;  for use with print
-##
 
-  # q1, q2, q3, q4  are the cartesian quadrants for a 2x2 grid
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+##                                                                                                       ##
+##                            pgTitle & vertbar  & blank canvass                             ##
+##                                                                                                       ##
+##-------------------------------------------------------------------------------------------------------##
 
-  vp.q1 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("right","top"))
-  vp.q2 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("left","top"))
-  vp.q3 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("left","bottom"))
-  vp.q4 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("right","bottom"))
-#--
+ggNewCanvass <- function(scale=100) {
+  # scale, generally, will be 100 or 1.  
 
-pgTitle <- function(txt, border=FALSE) {
+  
+  df <- data.frame()
+  ggplot(df) + geom_point() + xlim(0, 10) + ylim(0, 100)
+
+
+}
+
+
+pgTitle <- function(txt, bgalpha=0, bgcolor="white", border=0) {
   ## put title at top of page
-        if (border)
-            grid.rect(y = 1, height = unit(1.1, "lines"), just = c("center", "top"))
-            
+
+        grid.rect(y = 1, height = unit(1.1, "lines"), just = c("center", "top"), 
+                  gp=gpar(fill=bgcolor, alpha=bgalpha, lwd=border))
+
         grid.text(txt, y = unit(1, "npc") - unit(0.65, "lines"), gp = gpar(font = 2))
     }
 
 
-##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-##
-##     ggtext:   Plots a character object within plot bounds
-##
+vertbar <- function(vert=TRUE, shift=0, thick=1, color="black") {
+# add horizontal bar across grid space
+
+  # Arguments: 
+  #   shift should be a percentage.  Positive values of shift go up and right. 
+
+  val = 0.5 + (shift/100)
+
+  if (vert) {
+    grid.rect(x=unit(val, "npc"), width=unit(thick, "points"), gp=gpar(fill=color))
+  } else  {
+    grid.rect(y=unit(val, "npc"), height=unit(thick, "points"), gp=gpar(fill=color))
+  }
+}
+
+
+
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+##                                                                                                       ##
+##                            ggtext:   Plots a character object within plot bounds                      ##
+##                                                                                                       ##
+##-------------------------------------------------------------------------------------------------------##
 
 
 ggtextbasic <- function(txt, mono=TRUE) {
@@ -96,10 +133,11 @@ ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, mono=FALSE, useMo
 
 
 
-##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-##
-##
-##
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+##                                                                                                       ##
+##                            qqplot:                              ##
+##                                                                                                       ##
+##-------------------------------------------------------------------------------------------------------##
 
 qq     <- function(...) UseMethod("qqplot")
 qqplot <- function(...) UseMethod("qqplot")
