@@ -513,7 +513,7 @@ rmDupLines <- function(obj, trim=T)  {
 
 cordl <- function(...)  {
   # Capture Output, Remove Duplicate Lines, wrapper function. 
-  rmDupLines(capture.output(...))
+  rmDupLines(capture.output(substitute(...)))
 }
 
 
