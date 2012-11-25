@@ -31,19 +31,9 @@
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##                                                                                                       ##
-##                            pgTitle & vertbar  & blank canvass                             ##
+##                            pgTitle & vertbar                                                          ##
 ##                                                                                                       ##
 ##-------------------------------------------------------------------------------------------------------##
-
-ggNewCanvass <- function(scale=100) {
-  # scale, generally, will be 100 or 1.  
-
-  
-  df <- data.frame()
-  ggplot(df) + geom_point() + xlim(0, 10) + ylim(0, 100)
-
-
-}
 
 
 pgTitle <- function(txt, bgalpha=0, bgcolor="white", border=0) {
@@ -86,6 +76,9 @@ ggtextbasic <- function(txt, mono=TRUE) {
 
 
 ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, mono=FALSE, useMono=mono)  {
+
+  # TODO:  Incorporate with ggNewCanvass?
+
   # Arguments: 
   #   txt:  the text to output
   #   x, y: location of where to plot. Values are 0:100
@@ -130,6 +123,52 @@ ggtext <- function(txt, Title=NULL, x=50, y=50, s=3, h=0, v=0, mono=FALSE, useMo
 }
 
 
+
+
+# TODO: Make sure this is the best way to get a blank canvass. 
+# Will it work when mixed with other plots?  Can I turn on/off 'new'?
+ggNewCanvass <- function(scale=100) {
+  # scale, generally, will be 100 or 1.  
+
+  # If scale is user-given, make sure it is valid
+  if (!missing(scale)) { 
+    if (isNumber(scale)) {
+      scale <- as.numeric(scale)      
+    } else {
+      warning("Invalid value '", scale, "' given for scale. Using 100.")
+      scale <- 100
+    }
+  }
+
+
+
+# OPTION 1:
+  #  df <- data.frame()
+  #  ggplot(df) + geom_point() + xlim(0, scale) + ylim(0, scale)
+
+# OPTION 2:
+
+    # basic params used for setting plot
+    dat <- data.frame(x=c(0, 100), y=c(0, 100))
+    none <- element_blank()
+    fam <- ifelse(useMono, "mono", "serif")   # based on flag set by call to function
+
+    # plot
+    ggplot(dat) + 
+      # remove axis, and scale at [0:100]
+      scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks=NULL) +
+      scale_x_continuous(limits = c(0, 100), expand = c(0, 0), breaks=NULL) +
+      ylab(NULL) + xlab(NULL) + 
+
+      # clean up the plot background 
+      theme_bw() +
+      theme(panel.grid.major = none, panel.grid.minor = none) + 
+      theme(legend.position = "none") +
+      theme(panel.background = none) + 
+      theme(panel.border = none) + 
+
+      geom_blank()
+}
 
 
 

@@ -634,14 +634,14 @@ miniframe <- function(data, rows=200)  {
 
 makeDictWithIntegerKeys <- function(KVraw, applyLabels=TRUE)  { 
     ###  problem: if 
-    # we want a dict such that dict[aritstid] = artist_name
-    # PROBLEM:  since artistid's are integers, dict[artistid] will return the artistid'th (nth) item 
-    # eg:  dict[510] will return the 510th item of dict, not the artist whose id is 510  *rather, not necessarily..  
+    # we want a dict such that dict[aritstid] = source_name
+    # PROBLEM:  since sourceid's are integers, dict[sourceid] will return the sourceid'th (nth) item 
+    # eg:  dict[510] will return the 510th item of dict, not the source whose id is 510  *rather, not necessarily..  
     #      that is,  dict[510] != dict["510"]
     # 
-    # this wouldnt be a problem if we can ensure that each artistid gets loaded 
+    # this wouldnt be a problem if we can ensure that each sourceid gets loaded 
     # into dict at the position of its integer value
-    # then dict[artistid] and dict[sQuote(artistid)] will return the same value
+    # then dict[sourceid] and dict[sQuote(sourceid)] will return the same value
     #
     # Args: KVraw should be two-dim matrix with col1==Keys, and col2==Values, 
     #       applyLabels: if T, dict will have names st dict["123"] == dict[123]; 
@@ -931,12 +931,6 @@ msdwd <- function()
   setwd(msdDir)
 }
 
-nbswd <- function()
-{ 
-  previousdir <- getwd()   #Store the current working dir
-  nbsDir <- '~/git/nbs/'
-  setwd(nbsDir)
-}
 
 
 ###  PURPOSE OF THE xxxxsource(file) FUNCTIONS ARE TO BE ABLE 
@@ -954,12 +948,6 @@ gitsource <- function(file, dir="~/git/misc/rscripts/"){
   source(paste(dir,file,sep=""))
 }
 
-nbssource <- function(file, dir="~/git/nbs/src/"){
-  # Calls source on file located in NBS Data folder
-  # NOTE: nbs/src,  not nbs/data,   etc. 
-
-  source(paste(dir,file,sep=""))
-}
 
 
 homesource <- function(file, dir="~/"){
