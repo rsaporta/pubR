@@ -18,13 +18,35 @@
                                                                                                         
    # q1, q2, q3, q4  are the cartesian-like quadrants for a 2x2 grid, (q1 & q4 on the right).           
 
-   vp.q1 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 1.0, just = c("left","top"), name="vp.q2")     
-   vp.q2 <- viewport(width = 0.5, height = 0.5, x = 0.0, y = 1.0, just = c("left","top"), name="vp.q1")   
+   vp.q1 <- viewport(width = 0.5, height = 0.485, x = 0.5, y = 1.0, just = c("left","top"), name="vp.q2")     
+   vp.q2 <- viewport(width = 0.5, height = 0.485, x = 0.0, y = 1.0, just = c("left","top"), name="vp.q1")   
  
-   vp.q3 <- viewport(width = 0.5, height = 0.5, x = 0.0, y = 0.5, just = c("left","top"), name="vp.q3")
-   vp.q4 <- viewport(width = 0.5, height = 0.5, x = 0.5, y = 0.5, just = c("left","top"), name="vp.q4")
+   vp.q3 <- viewport(width = 0.5, height = 0.485, x = 0.0, y = 0.5, just = c("left","top"), name="vp.q3")
+   vp.q4 <- viewport(width = 0.5, height = 0.485, x = 0.5, y = 0.5, just = c("left","top"), name="vp.q4")
 ##                                                                                                       ##
 ##-------------------------------------------------------------------------------------------------------##
+
+  #layout 3 vertical
+  l3vert <- grid.layout(ncol=3)
+
+  vp.midUp   <- viewport(width = 1, height = 0.2, x = 0.5, y = 0.5, just = c("centre","bottom"), name="vp.midUp")    
+  vp.midDown <- viewport(width = 1, height = 0.2, x = 0.5, y = 0.5, just = c("centre","top"), name="vp.midDown")   
+   
+  vp.midDown3 <- viewport(layout=l3vert, width = 1, height = 0.2, x = 0.5, y = 0.5, just = c("centre","top"), name="vp.midDown")   
+
+  #---
+  #  This should be able to handled with pushViewport(vpname) --- i just cant figure it out right now
+  vp.midL   <- viewport(width = .33, height = 0.2, x = 0.0, y = 0.5, just = c("left","top"), name="vp.midL")    
+  vp.midC   <- viewport(width = .34, height = 0.2, x = .34, y = 0.5, just = c("left","top"), name="vp.midC")    
+  vp.midR   <- viewport(width = .33, height = 0.2, x = .67, y = 0.5, just = c("left","top"), name="vp.midR")    
+
+   # # TESTING
+   # grid.show.layout(grid.layout(), vp=vp.midDown3)
+   # ggNewCanvass()
+   # grid.rect(vp=vp.midR, gp=gpar(col="blue"))
+##                                                                                                       ##
+##-------------------------------------------------------------------------------------------------------##
+
 
 
 
@@ -61,6 +83,16 @@ vertbar <- function(vert=TRUE, shift=0, thick=1, color="black") {
   }
 }
 
+
+
+
+
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+
+# Some Defaults
+
+qTit7 <- theme(plot.title = element_text(size = 7, hjust=.15, face="bold"))
+qTit8 <- theme(plot.title = element_text(size = 8, hjust=.15, face="bold"))
 
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
@@ -139,8 +171,7 @@ ggNewCanvass <- function(scale=100) {
       scale <- 100
     }
   }
-
-
+  
 
 # OPTION 1:
   #  df <- data.frame()

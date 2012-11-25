@@ -5,6 +5,32 @@ nl <- "\n"
 len <- length
 p <- paste0
 
+
+TFtest <- function(fullStop=TRUE, dontWarn=FALSE) {
+# checks if the vars T & F have been assigned values other than TRUE / FALSE
+# Arguments: 
+#   fullStop:  Flag indicating whether to stop with error, or simply issue warning
+
+  if (!(identical(T, TRUE) && identical(F, FALSE)))
+    if (fullStop) {
+      stop("T/F have been reassigned non-boolean values: \n\tT == ", T, "\n\tF == ", F)
+    } else {
+      if (!dontWarn)
+        warning("T/F have been reassigned non-boolean values, which may cause problems: \n\tT == ", T, "\n\tF == ", F)
+      return(FALSE)
+    }
+  return(TRUE)
+}
+## Practical use: confirm T/F have appropriate values
+      # if (!TFtest(FALSE, TRUE))
+      #    T <- !(F <- FALSE)
+
+
+w <- function() {
+  if (3 > 2)
+    stop("This is a test")
+}
+
 JavaTest <- function(stopRun=TRUE, runInit=TRUE) {
   ## ensures that rJava is up and running.  If Java is NOT running and...
   ##    stopRun=T, will throw an error. If stop=False, will throw a warning.
@@ -232,6 +258,19 @@ fw0 <- function(obj, digs=NULL)  {
   # return
   sapply(sequ, function(x) paste0(paste0(rep(0, max(0, digs-nchar(x))), collapse=""), x))
 }
+
+## functino to format numerics
+fw <- function(x, dec=4, digs=4, w=NULL, ...) {
+  ## wrapper to function format(.)
+  format(x, nsmall=dec, digits=digs, width=w, ...)
+}
+
+## functino to format numerics
+fw3 <- function(x, dec=3, digs=3, w=NULL, ...) {
+  ## wrapper to function format(.)
+  format(x, nsmall=dec, digits=digs, width=w, ...)
+}
+
 
 ###############################################################
 ###############################################################
