@@ -4,6 +4,7 @@ nl <- "\n"
 # useful shorthand
 len <- length
 p <- paste0
+d <- dev.off
 
 
 TFtest <- function(fullStop=TRUE, dontWarn=FALSE) {
@@ -438,6 +439,7 @@ insert <- function(lis, obj, pos=0, objIsMany=FALSE) {
   }
 }
 
+#--------------------
 
 as.path <- function(..., fsep=.Platform$file.sep, expand=TRUE) {
 
@@ -463,6 +465,8 @@ as.path <- function(..., fsep=.Platform$file.sep, expand=TRUE) {
       return(do.call(file.path, c(cleaned, fsep=fsep)))
   return(path.expand(do.call(file.path, c(cleaned, fsep=fsep))))
 }
+
+#------------------
 
 dosDir <- function(wrkDir, gitData=FALSE, mkdir=TRUE) {
   # makes data, out, src directory inside the directory wrkDir

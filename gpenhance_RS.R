@@ -18,8 +18,8 @@
                                                                                                         
    # q1, q2, q3, q4  are the cartesian-like quadrants for a 2x2 grid, (q1 & q4 on the right).           
 
-   vp.q1 <- viewport(width = 0.5, height = 0.485, x = 0.5, y = 1.0, just = c("left","top"), name="vp.q2")     
-   vp.q2 <- viewport(width = 0.5, height = 0.485, x = 0.0, y = 1.0, just = c("left","top"), name="vp.q1")   
+   vp.q1 <- viewport(width = 0.5, height = 0.485, x = 0.5, y = 1.0, just = c("left","top"), name="vp.q1")     
+   vp.q2 <- viewport(width = 0.5, height = 0.485, x = 0.0, y = 1.0, just = c("left","top"), name="vp.q2")   
  
    vp.q3 <- viewport(width = 0.5, height = 0.485, x = 0.0, y = 0.5, just = c("left","top"), name="vp.q3")
    vp.q4 <- viewport(width = 0.5, height = 0.485, x = 0.5, y = 0.5, just = c("left","top"), name="vp.q4")
@@ -182,7 +182,6 @@ ggNewCanvass <- function(scale=100) {
     # basic params used for setting plot
     dat <- data.frame(x=c(0, 100), y=c(0, 100))
     none <- element_blank()
-    fam <- ifelse(useMono, "mono", "serif")   # based on flag set by call to function
 
     # plot
     ggplot(dat) + 
