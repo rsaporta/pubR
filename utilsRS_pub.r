@@ -63,7 +63,7 @@ isErr <- function(expression)  {
   #    T if expression throws an Error // F if expression is evaluated without error
   #    NOTE:  The actual evaluation of the expression is NOT RETURNED
   
-  return( class(try(eval(expression), silent=T))=="try-error" )
+	return( class(try(eval(expression), silent=T))=="try-error" )
 }
 
 isNumber <- function(x)  {
@@ -155,8 +155,8 @@ longestLength <- function(obj, currentMax=0)  {
 
 #--------------------------------------------
 
-listFlatten <- function(obj) {
-  ## Flattens like rbind, but if elements are of different length, plugs in NA's
+listFlatten <- function(obj, filler=NA) {
+## Flattens obj like rbind, but if elements are of different length, plugs in value filler
 
   # Initialize Vars
   bind <- FALSE
@@ -168,13 +168,13 @@ listFlatten <- function(obj) {
   # If all matrix-like. 
   if (all(matLike))   {
     maxLng <- max(sapply(obj[matLike], ncol))
-    obj[matLike] <- lapply(obj[matLike], function(x) t(apply(x, 1, c, rep(NA, maxLng - ncol(x)))))
+    obj[matLike] <- lapply(obj[matLike], function(x) t(apply(x, 1, c, rep(filler, maxLng - ncol(x)))))
     bind <- TRUE
   
   # If all vector-like
   }  else if (all(vecLike))  {
     maxLng <- max(sapply(obj[vecLike], length))
-    obj[vecLike] <- lapply(obj[vecLike], function(x) c(x, rep(NA, maxLng - length(x)))) 
+    obj[vecLike] <- lapply(obj[vecLike], function(x) c(x, rep(filler, maxLng - length(x)))) 
     bind <- TRUE
 
   # If all are either matrix- or vector-like 
@@ -182,11 +182,11 @@ listFlatten <- function(obj) {
 
     maxLng <- max(sapply(obj[matLike], ncol), sapply(obj[vecLike], length))
 
-    # Add in NA's as needed
+    # Add in filler's as needed
     obj[matLike] <- 
-       lapply(obj[matLike], function(x) t(apply(x, 1, c, rep(NA, maxLng - ncol(x)))))
+       lapply(obj[matLike], function(x) t(apply(x, 1, c, rep(filler, maxLng - ncol(x)))))
     obj[vecLike] <- 
-       lapply(obj[vecLike], function(x) c(x, rep(NA, maxLng - length(x))))
+       lapply(obj[vecLike], function(x) c(x, rep(filler, maxLng - length(x))))
     bind <- TRUE
   } 
 
@@ -197,14 +197,75 @@ listFlatten <- function(obj) {
     return(ret)
   }
 
-
-  # Otherwise, if obj is sitll a list, continue recursing    
+  # Otherwise, if obj is sitll a list, continue recursively    
   if (is.list(obj)) { 
       return(lapply(obj, listFlatten))
   }
 
   # If none of the above, return an error. 
   stop("Unknown object type")
+}
+
+
+#--------------------------------------------
+
+tableFlatten <- function(tableWithLists, filler="") {
+# takes as input a table with lists and returns a flat table
+#  empty spots in lists are filled with value of `filler`
+#
+# depends on: listFlatten(.), findGroupRanges(.), fw0(.)
+
+  # index which columns are lists
+  listCols <- sapply(tableWithLists, is.list)
+
+  tableWithLists[listCols]
+  tableWithLists[!listCols]
+
+  # flatten lists into table
+  flattened <- sapply(tableWithLists[listCols], listFlatten, filler=filler, simplify=FALSE)
+
+  # fix names
+  for (i in 1:length(flattened)) colnames(flattened[[i]]) <- fw0(ncol(flattened[[i]]), 2)
+
+  # REASSEMBLE, IN ORDER
+    # find pivot point counts
+    pivots <- sapply(findGroupRanges(listCols), length)
+
+    #index markers
+    indNonList <- indList <- 1
+
+    # nonListGrp <- (0:(length(pivots)/2)) * 2 + 1
+    # ListGrp <- (1:(length(pivots)/2)) * 2
+    final <- data.frame(row.names=row.names(tableWithLists))
+    for (i in 1:length(pivots)) {
+      if(i %% 2 == 1) {
+          final <- cbind(final, 
+                       tableWithLists[!listCols][indNonList:((indNonList<-indNonList+pivots[[i]])-1)]
+                       )
+      }  else  {
+          final <- cbind(final, 
+                       flattened[indList:((indList<-indList+pivots[[i]])-1)]
+                       )
+      }
+    }
+    
+    return(final)
+}
+
+#--------------------------------------------
+
+findGroupRanges <- function(booleanVec) {
+# returns list of indexes indicating a series of identical values
+  pivots <- which(sapply(2:length(booleanVec), function(i) booleanVec[[i]] != booleanVec[[i-1]])) 
+
+  ### THIS ISNT NEEDED... 
+  # if (identical(pivots, numeric(0)))
+  #   pivots <- length(booleanVec)
+
+  pivots <- c(0, pivots, length(booleanVec))
+  lapply(seq(2, length(pivots)), function(i)
+    seq(pivots[i-1]+1, pivots[i])
+  )
 }
 
 #--------------------------------------------
@@ -227,7 +288,45 @@ nestedIndx <- function(this, pre=NULL, thisdepth=0) {
 
 
 
-fw0 <- function(obj, digs=NULL)  {
+
+fw0 <- function(num, digs=NULL, mkSeq=TRUE)  {
+  ## formats digits with leading 0's. 
+  ## num should be an integer or range of integers.
+  ## if mkSeq=T, then an num of length 1 will be expanded to seq(1, num).   
+
+  # TODO 1:  put more error check
+  if (is.list(num))
+    lapply(num, fw0)
+
+  if (!is.vector(num)) {
+    stop("num should be integer or vector")
+  }
+
+  # convert strings to numbers
+  num <- as.numeric(num)
+
+  # If num is a single number and mkSeq is T, expand to seq(1, num)
+  if(mkSeq && !length(num)>1)
+    num <- (1:num)
+
+  # number of digits is that of largest number or digs, whichever is max
+  digs <- max(nchar(max(abs(num))), digs)  
+
+  # if there are a mix of neg & pos numbers, add a space for pos numbs
+  posSpace <- ifelse(sign(max(num)) != sign(min(num)), " ", "")
+
+  # return: paste appropriate 0's and preface neg/pos mark
+  sapply(num, function(x) ifelse(x<0, 
+    paste0("-", paste0(rep(0, max(0, digs-nchar(abs(x)))), collapse=""), abs(x)),
+    paste0(posSpace, paste0(rep(0, max(0, digs-nchar(abs(x)))), collapse=""), x)
+    ))
+}
+
+#-----------------------------------------------
+
+## THIS IS THE OLDER INTERPRETATION OF fw0. 
+## SPECIFICALLY FOR HOW fw(199, digs=2) 
+fw0.older <- function(obj, digs=NULL)  {
   ## formats digits with leading 0's. 
   ## obj should be an integer or range of integers.  
 
@@ -238,14 +337,12 @@ fw0 <- function(obj, digs=NULL)  {
   # TODO 1:  put more error check
   # TODO 2:  clean up the if statements. Consider using recursion
 
-
   # If digs is specified, also consider the obj specified (do not expand to range)
   if(!is.null(digs)) {
     sequ <- obj
   
   # Otherwise, calculate range, based on length of obj. Then calculate digs
   } else {
-
 
     if(!length(obj)>1) {
         sequ <- (1:as.numeric(obj))
@@ -259,6 +356,9 @@ fw0 <- function(obj, digs=NULL)  {
   # return
   sapply(sequ, function(x) paste0(paste0(rep(0, max(0, digs-nchar(x))), collapse=""), x))
 }
+
+#--------------------------------------------
+#-----------------------------------------------
 
 ## functino to format numerics
 fw <- function(x, dec=4, digs=4, w=NULL, ...) {
@@ -503,8 +603,8 @@ rmDupLines <- function(obj, trim=T)  {
       return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
 
   if (trim) {
-    blanks <- sapply(obj, identical, "", USE.NAMES=F)
-    obj <- obj[min(which(!blanks)):max(which(!blanks))]
+    filler <- sapply(obj, identical, "", USE.NAMES=F)
+    obj <- obj[min(which(!filler)):max(which(!filler))]
   }
   
   return(obj[!sapply(seq(obj)[-1L], function(i) obj[[i]]==obj[[i-1]])])
@@ -717,35 +817,35 @@ makeDictWithIntegerKeys <- function(KVraw, applyLabels=TRUE)  {
   
   
 chkp <-chkpt <- function(logStr, chkpOn=TRUE, final=FALSE) {
-  # Logs the string to the console for checkpointing & troubleshooting
-  # Args:
-  # logStr:  a string that will be logged to stdout
-  # chkpOn:  If FALSE, then logging does not occur. (for quickly turning chkp on/off)
-  # 
-  # Returns Null
-  
-  if (chkpOn) {
-    if (nchar(logStr)<3)
-      logStr <- paste0("\t\t  ",logStr)
-    else if (nchar(logStr)<12)
-      logStr <- paste0("\t\t",logStr)
-    else if (nchar(logStr)<15)
-      logStr <- paste0("\t",logStr)
-    else if (nchar(logStr)<17)
-      logStr <- paste0("  ",logStr)
-    else if (nchar(logStr)<20)
-      logStr <- paste0(" ",logStr)
+ 	# Logs the string to the console for checkpointing & troubleshooting
+ 	# Args:
+ 	#	logStr:  a string that will be logged to stdout
+ 	#	chkpOn:	 If FALSE, then logging does not occur. (for quickly turning chkp on/off)
+ 	# 
+ 	# Returns Null
+ 	
+ 	if (chkpOn) {
+ 		if (nchar(logStr)<3)
+ 			logStr <- paste0("\t\t  ",logStr)
+ 		else if (nchar(logStr)<12)
+ 			logStr <- paste0("\t\t",logStr)
+ 		else if (nchar(logStr)<15)
+ 			logStr <- paste0("\t",logStr)
+ 		else if (nchar(logStr)<17)
+ 			logStr <- paste0("  ",logStr)
+		else if (nchar(logStr)<20)
+ 			logStr <- paste0(" ",logStr)
 
-    #log
-    cat(paste0("\t\t",
-          ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
-  }
-  
-  if (final) {
-    cat("\n\n")  #for cleanliness
-  }
+		#log
+ 		cat(paste0("\t\t",
+ 				  ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
+ 	}
+ 	
+ 	if (final) {
+ 		cat("\n\n")  #for cleanliness
+ 	}
 
-  return()
+ 	return()
 }
 
  
