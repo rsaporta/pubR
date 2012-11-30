@@ -1,5 +1,6 @@
 # for broken keyboard with no \ key
 nl <- "\n"
+or <- "  |  "
 
 # useful shorthand
 len <- length
@@ -7,6 +8,7 @@ p <- paste0
 d <- dev.off
 
 
+#------------------------------------------------------
 TFtest <- function(fullStop=TRUE, dontWarn=FALSE) {
 # checks if the vars T & F have been assigned values other than TRUE / FALSE
 # Arguments: 
@@ -22,15 +24,15 @@ TFtest <- function(fullStop=TRUE, dontWarn=FALSE) {
     }
   return(TRUE)
 }
-## Practical use: confirm T/F have appropriate values
+
+## Practical use for TFtest() is confirming that the objects T/F have appropriate values
+##  ie, I would generally include this at the top of a script
       # if (!TFtest(FALSE, TRUE))
       #    T <- !(F <- FALSE)
 
 
-w <- function() {
-  if (3 > 2)
-    stop("This is a test")
-}
+#------------------------------------------------------
+
 
 JavaTest <- function(stopRun=TRUE, runInit=TRUE) {
   ## ensures that rJava is up and running.  If Java is NOT running and...
@@ -55,6 +57,7 @@ JavaTest <- function(stopRun=TRUE, runInit=TRUE) {
   }
 }
 
+
 isErr <- function(expression)  {
   #  Boolean; Tries to evaluate the expresion; returns T if an error is thrown
   #  Args:
@@ -63,7 +66,7 @@ isErr <- function(expression)  {
   #    T if expression throws an Error // F if expression is evaluated without error
   #    NOTE:  The actual evaluation of the expression is NOT RETURNED
   
-	return( class(try(eval(expression), silent=T))=="try-error" )
+  return( inherits(try(eval(expression), silent=T), "try-error") )
 }
 
 isNumber <- function(x)  {
@@ -157,6 +160,12 @@ longestLength <- function(obj, currentMax=0)  {
 
 listFlatten <- function(obj, filler=NA) {
 ## Flattens obj like rbind, but if elements are of different length, plugs in value filler
+
+  # if obj is a list of all single elements, pop them up one level
+  if (is.list(obj) && all(sapply(obj, length) == 1)) {
+    obj <- sapply(obj, function(x) x)
+  }
+
 
   # Initialize Vars
   bind <- FALSE
@@ -757,6 +766,13 @@ qy <- quity <- function(dir='~/')  {
   quit('yes')
 }
 
+qn <- quitn <- function(dir='~/')  {
+  ## quits R and saves the .RData and .Rhistory to dir
+  setwd(dir)
+  quit('no')
+}
+
+
 tbs <- function(n, nl=FALSE)  {
   # returns a string of n-many tabs, concatenated together
   # if nl=T, will preface with a new line char.
@@ -817,35 +833,35 @@ makeDictWithIntegerKeys <- function(KVraw, applyLabels=TRUE)  {
   
   
 chkp <-chkpt <- function(logStr, chkpOn=TRUE, final=FALSE) {
- 	# Logs the string to the console for checkpointing & troubleshooting
- 	# Args:
- 	#	logStr:  a string that will be logged to stdout
- 	#	chkpOn:	 If FALSE, then logging does not occur. (for quickly turning chkp on/off)
- 	# 
- 	# Returns Null
- 	
- 	if (chkpOn) {
- 		if (nchar(logStr)<3)
- 			logStr <- paste0("\t\t  ",logStr)
- 		else if (nchar(logStr)<12)
- 			logStr <- paste0("\t\t",logStr)
- 		else if (nchar(logStr)<15)
- 			logStr <- paste0("\t",logStr)
- 		else if (nchar(logStr)<17)
- 			logStr <- paste0("  ",logStr)
-		else if (nchar(logStr)<20)
- 			logStr <- paste0(" ",logStr)
+  # Logs the string to the console for checkpointing & troubleshooting
+  # Args:
+  # logStr:  a string that will be logged to stdout
+  # chkpOn:  If FALSE, then logging does not occur. (for quickly turning chkp on/off)
+  # 
+  # Returns Null
+  
+  if (chkpOn) {
+    if (nchar(logStr)<3)
+      logStr <- paste0("\t\t  ",logStr)
+    else if (nchar(logStr)<12)
+      logStr <- paste0("\t\t",logStr)
+    else if (nchar(logStr)<15)
+      logStr <- paste0("\t",logStr)
+    else if (nchar(logStr)<17)
+      logStr <- paste0("  ",logStr)
+    else if (nchar(logStr)<20)
+      logStr <- paste0(" ",logStr)
 
-		#log
- 		cat(paste0("\t\t",
- 				  ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
- 	}
- 	
- 	if (final) {
- 		cat("\n\n")  #for cleanliness
- 	}
+    #log
+    cat(paste0("\t\t",
+          ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
+  }
+  
+  if (final) {
+    cat("\n\n")  #for cleanliness
+  }
 
- 	return()
+  return()
 }
 
  
@@ -961,6 +977,28 @@ saveToFile_TabDelim <- function(obj, directory=getwd())  {
 #  write.table(rbind(obj), file=fileName, sep="\t", eol="\n",
        #       col.names=TRUE, row.names=TRUE, append=T, quote=F, qmethod="double")
   return(fileName)
+}
+
+retTst <- function(n) {
+  ## used for trouble shooting
+  # positive values of n return T
+  # negative values of n return F
+  # NA values of n return NA
+  # all other values of n return NULL
+
+  if (any(is.na(n) | is.null(n))) 
+     return(NA)
+  
+  # return
+  ret <- ifelse(n > 0, TRUE,  
+    ifelse(n < 0, FALSE, 
+      list(NULL)
+  )) 
+
+  if(length(ret)==1 && is.null(ret[[1]]))
+    return(NULL)
+
+  return(ret)
 }
 
 logscale <- function(range=2:5, intervals=2, base=10)  {
