@@ -1,4 +1,4 @@
-# for broken keyboard with no \ key
+# for broken keyboard with no \ or | key
 nl <- "\n"
 or <- "  |  "
 
@@ -577,7 +577,7 @@ as.path <- function(..., fsep=.Platform$file.sep, expand=TRUE) {
 
 #------------------
 
-dosDir <- function(wrkDir, gitData=FALSE, mkdir=TRUE) {
+dosDir <- function(wrkDir, gitData=FALSE, mkdir=FALSE) {
   # makes data, out, src directory inside the directory wrkDir
   #   and creates variables with full path to these directories
   #   in the parent environment  (the environment that called this func) 
