@@ -30,7 +30,7 @@ selfAssign <- function(self, ind, val, n=1, silent=FALSE) {
       # if no indecies will be selected, stop here
       if(identical(ind, integer(0)) || is.null(ind)) {
         if(!silent) warning("No indecies selected")
-        return()
+        return(FALSE)
       }
 
       # if val is a string, we need to wrap it in quotes
@@ -49,6 +49,8 @@ selfAssign <- function(self, ind, val, n=1, silent=FALSE) {
      
      # evaluate in parent.frame(n)
      eval(parse(text=ret), envir=parent.frame(n))
+
+     return(TRUE)
 }
 
 
@@ -66,7 +68,7 @@ selfAssign <- function(self, ind, val, n=1, silent=FALSE) {
 #---------------------------------------------------------------------#
 
 
-NAtoNULL <- function(obj, n=1) {
+NAtoNULL <- function(obj, n=1, safetyBreak=1) {
 # replace NA's with NULL
   selfAssign(match.call()[[2]], is.na(obj), NULL, n=n+1)
 }
@@ -138,6 +140,13 @@ selfReplace <- function(obj, toReplace, val, n=1) {
   #               and all instances of toReplace removed  #
   #-------------------------------------------------------#
 
+  # TODO:  fix this
+  # Problem:  if the name of obj in the call is also obj, the test below will
+  #           produce inacurrte results.  Therefore, return NA for now. 
+  #           (Note: the self-assigning should still have worked)
+  if (match.call()[[2]] == "obj")
+    return(NA)
+
   #--- TESTERS ---#
       # grab the new value of obj
       objPost <- eval(match.call()[[2]])
@@ -198,11 +207,45 @@ selfReplace <- function(obj, toReplace, val, n=1) {
       #  n by 1 for apply & lapply.  Increase n by 2 for sapply      
   }
 
+#------------------------------------------------
+#  I tried to implement a version using `try` but it does not work. 
+#  I think the problem is that wrapping something inside `try` 
+#    affects the call-stack, therefore messing up line in selfAssign:
+#    `match.call(call=sys.call(sys.parent(1)))`
+#  
+#  The ultimate goal was to be able to use non-objects and get in return the modified value 
+#    ie:  `NAto0(c(1, NA, 3))`   # returns:  c(1, 0, 3)   
+
+      #---------------
+   #      NAtoNULL.with_ErrorCatch <- function(obj, n=1, safetyBreak=1) {
+   #      # replace NA's with NULL   
+   #
+   #        err <- try(selfAssign(match.call()[[2]], is.na(obj), NULL, n=n+1), silent=TRUE)   
+   #
+   #        # Check for error
+   #        if (inherits(err, "try-error")) {
+   #        
+   #          # EXPECTED ERRORS:
+   #          # Check for none-object. Error message will be as follows
+   #          errMessageForNonObj <- "target of assignment expands to non-language object"
+   #          if (attr(err, "condition")$message == errMessageForNonObj && safetyBreak<5) { # safetyBreak<20 to avoid infiinite loop 
+   #            x <- eval(match.call()[[2]]) 
+   #            NAtoNULL(x, safetyBreak=safetyBreak+1)
+   #            return(x)
+   #          }   
+   #
+   #          # UNEXPECTED ERROR, Throw it upstream
+   #          stop(err)
+   #        }   
+   #
+   #        # otherwise, no error
+   #        return(TRUE)
+   #      }
+      #-------------------
 
 #------------------------------------------------#
+#     messing with match.call() and '[['()       #
 #------------------------------------------------#
-
-Scrap Work 
 
     #------------------
     #  THIS WORKS, KIND OF
@@ -223,6 +266,8 @@ Scrap Work
         '[['(vec, ind) <- value
         vec
     #-----------------------
+
+
 
 #------------------------------------------------#
 #------------------------------------------------#
