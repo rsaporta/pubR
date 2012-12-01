@@ -1,12 +1,14 @@
-# for broken keyboard with no \ or | key
+# for broken keyboard with no \ key
 nl <- "\n"
 or <- "  |  "
 
 # useful shorthand
 len <- length
 p <- paste0
-d <- dev.off
 
+# quick & dirty for pdf output testing
+d <- dev.off
+dpf <- function(d=outDir, f="test.pdf") pdf(as.path(d, f))
 
 #------------------------------------------------------
 TFtest <- function(fullStop=TRUE, dontWarn=FALSE) {
@@ -575,7 +577,7 @@ as.path <- function(..., fsep=.Platform$file.sep, expand=TRUE) {
   return(path.expand(do.call(file.path, c(cleaned, fsep=fsep))))
 }
 
-#------------------
+#--------------------------
 
 dosDir <- function(wrkDir, gitData=FALSE, mkdir=FALSE) {
   # makes data, out, src directory inside the directory wrkDir
@@ -602,30 +604,7 @@ dosDir <- function(wrkDir, gitData=FALSE, mkdir=FALSE) {
 
 }
  
-
-rmDupLines <- function(obj, trim=T)  {
-  # removes duplicate lines from obj and returns the modified object.
-  # especially useful for captured output of summary.lm() 
-  # trim only applies to vectors (ie, null dim)  
-
-  if (!is.null(dim(obj)))
-      return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
-
-  if (trim) {
-    filler <- sapply(obj, identical, "", USE.NAMES=F)
-    obj <- obj[min(which(!filler)):max(which(!filler))]
-  }
-  
-  return(obj[!sapply(seq(obj)[-1L], function(i) obj[[i]]==obj[[i-1]])])
-}
-
-
-cordl <- function(...)  {
-  # Capture Output, Remove Duplicate Lines, wrapper function. 
-  rmDupLines(capture.output(substitute(...)))
-}
-
-
+#--------------------------
 
 makeDictFromCSV <- function(csvFile)  {
   # Creates a dictionary out of a CSV file where 
@@ -1138,6 +1117,12 @@ homesource <- function(file, dir="~/"){
 }
 
 
+txr <- function() {
+# just a short-hand to load the transferLibrary functions
+  gitsource("transferLibrary.R")
+}
+
+
 ## ---------------------------------------------##
 ##                 FUNC FORM                    ##
 ##               FOR SOURCING URLS              ##
@@ -1225,3 +1210,143 @@ source.url <- function(...) {
 ####
 ### ----------------------------------------------------------------------------
 #####%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%########
+
+
+
+
+
+
+          #_________________________________________#
+          #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+          #-----------------------------------------#
+          #     cordl, rmDupLines, paraLineChop     #
+          #_________________________________________#
+          #-----------------------------------------#
+
+
+#--------------------------
+rmDupLines <- function(obj, trim=T)  {
+  # removes duplicate lines from obj and returns the modified object.
+  # especially useful for captured output of summary.lm() 
+  # trim only applies to vectors (ie, null dim)  
+
+  if (!is.null(dim(obj)))
+      return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
+
+  if (trim) {
+    filler <- sapply(obj, identical, "", USE.NAMES=F)
+    obj <- obj[min(which(!filler)):max(which(!filler))]
+  }
+  
+  return(obj[!sapply(seq(obj)[-1L], function(i) obj[[i]]==obj[[i-1]])])
+}
+
+#--------------------------------------------------------
+
+cordl <- function(..., length=NULL, justSize=FALSE, crop=TRUE, chop=TRUE)  {
+  # Capture Output, Remove Duplicate Lines, wrapper function.
+  # Will run paraLineChop unless either of crop or chop are FALSE 
+  #  crop and chop serve the same purpose.  Allowing for synonyms 
+  #  for forgetful programmers. 
+
+  ret <- rmDupLines(capture.output(eval(substitute(...))))
+
+  if (!crop)
+    return(ret)
+
+  return(paraLineChop(ret, length=length, justSize=justSize))
+}
+
+#--------------------------------------------------------
+
+paraLineChop <- function(so, length=NULL, lines=NULL, justSize=FALSE) {
+# chops up the lines in a capture.ouput paragraph to length
+# so is some output from capture.output
+#
+# if justSize, then will output value of chop and how many lines will be chopped
+
+    # if user provided a length, use that. Else calculate it as a weighted average
+    if (!is.null(length)) {
+        chop <- length
+        feather <- 0
+    } else {
+        feather <- 5
+        lngs <- sort(nchar(so))
+        lngs <- lngs[!lngs == 0]
+        
+        # we want to trim, but only if there is something to tirm
+        L <- length(lngs)
+        trm <- ceiling(max(1, .15*L, .08*L))
+
+        weigtd <- mean(lngs[-(1:trm)])
+        chop <- round(mean(c(lngs[L-trm], mean(lngs[-(1:trm)])))) + 6
+    }
+
+    # if no value for chop determined
+    if (is.na(chop)) {
+        warning("couldnt chop")
+        return(so)
+    }
+
+    # determine which lines need cropping
+    lines <- nchar(so) > chop 
+
+    if (justSize)
+        return (c(lines=sum(lines), chop=chop))
+
+    # if there are no lines to crop, return the thing now
+    if(!any(lines))
+        return(so)
+
+    matches <- regexpr(" ", substr(so[lines], chop-11, chop+feather))
+    
+    # TODO:  Deal with NA by chopping at chop-1, then adding a hyphon
+    matches[matches<0] <- NA
+
+    # Mark the specific spot in each line where the chop will happen    
+    markers <- chop-11 + matches
+
+    # 2nd Halfs
+    sublines <- substr(so[lines], markers, nchar(so[lines]))
+
+    # add some tabs
+    sublines[nchar(sublines) < (chop - 8)] <- paste0(tbs(2), sublines[nchar(sublines) < (chop - 8)])
+    sublines[nchar(sublines) < (chop - 4)] <- paste0(tbs(1), sublines[nchar(sublines) < (chop - 4)])
+
+    # 1st Halfs
+    so[lines] <- substr(so[lines], 1, markers-1)
+
+    numbLines <- length(sublines)
+    for (j in seq(numbLines)) {
+
+        antij <- numbLines - j +1
+        i <- which(lines)[[antij]]
+        tail <- seq(i+1, length(so))
+
+        # error prevention for the last line, so that we dont have leng:(leng+1)
+        if (i == length(so))
+            tail <- i
+
+        so[tail+1] <- so[tail]
+        so[i+1]    <- sublines[[antij]] 
+    }
+
+    # if any long lines remain, recurse
+    if (any(nchar(so) > chop))
+        return(paraLineChop(so, length=chop))
+    
+    return(so)
+}
+#_________________________________________#
+
+
+
+
+
+## FUNCTION TO MAKE A PAGE BREAK FOR NEXT PROBLEM NUMBER
+nextProb <- function(probNumb, pgBreak=TRUE) {
+    par(new=F)
+    plot(0:10, type = "n", xaxt="n", yaxt="n", bty="n", xlab = "", ylab = "")
+    text(5.5, 6.5, labels=paste0("Problem #", probNumb), cex=2.5, adj=0.5)
+    par(new=!pgBreak)
+}
