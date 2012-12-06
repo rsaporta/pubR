@@ -160,13 +160,35 @@ longestLength <- function(obj, currentMax=0)  {
 
 #--------------------------------------------
 
+
 listFlatten <- function(obj, filler=NA) {
 ## Flattens obj like rbind, but if elements are of different length, plugs in value filler
+## DEPENDS ON: insertListAsCols (and insertListAsCols.list )
 
   # if obj is a list of all single elements, pop them up one level
   if (is.list(obj) && all(sapply(obj, length) == 1)) {
-    obj <- sapply(obj, function(x) x)
+    obj <- sapply(obj, function(x) x)   ## TODO:  Double check that this does not need to be transposed.  Or perhaps use SimplfyTo..
   }
+
+
+  # If obj contains a mix of lists/non-lists elements, then 
+  #    all list elements need to be handled first via a recursive call to listFlatten
+  listIndex <- sapply(obj, is.list) 
+  if (any(listIndex)) {
+    input <- sapply(obj[listIndex], listFlatten, filler=filler, simplify=FALSE)
+
+      # if object is a list without columns (ie, not dataframe, etc), then we can just insert the input back in. 
+      # Otherwise, we need to call isertListAsCols
+      if (is.list(obj) && is.null(dim(obj)))  {
+        obj[listIndex] <- input
+      } else {
+        obj <- insertListAsCols(input, target=obj, targetCols=which(listIndex), replaceOriginalTargetCol=TRUE, preserveNames=TRUE)          
+      }
+  } # end if (any(listIndex))
+ 
+  # Next, Any elements of obj that are factors need to be converted to character
+  factorIndex <- sapply(obj, is.factor) 
+  obj[factorIndex]  <-  sapply(obj[factorIndex], as.character)
 
 
   # Initialize Vars
@@ -189,7 +211,7 @@ listFlatten <- function(obj, filler=NA) {
     bind <- TRUE
 
   # If all are either matrix- or vector-like 
-  }  else if (all(matLike & vecLike))   {
+  }  else if (all(matLike | vecLike))   {  # TODO:  Double check this.  I had this with `&` before. I think that was incorrect. 
 
     maxLng <- max(sapply(obj[matLike], ncol), sapply(obj[vecLike], length))
 
@@ -203,6 +225,12 @@ listFlatten <- function(obj, filler=NA) {
 
   # If processed and ready to be returned, then just clean it up
   if(bind)  {
+
+    # If obj is a data.frame, then it might be all ready to go
+    if (is.data.frame(obj) && length(obj) == ncol(obj))
+      return(obj)
+
+    # Otherwise, flatten `obj` with rbind. 
     ret <- (do.call(rbind, obj))
     colnames(ret) <- paste0("L", fw0(1:ncol(ret), digs=2))
     return(ret)
@@ -262,6 +290,126 @@ tableFlatten <- function(tableWithLists, filler="") {
     
     return(final)
 }
+
+
+#---------------------------------------------
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#___________________________________________%
+  # Generic form of insertListAsCols
+
+  insertListAsCols <- function(input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE)
+      UseMethod("insertListAsCols")
+#___________________________________________%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+
+insertListAsCols.list <- function(input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE) {
+# input should be table-like or a list of table-like elements.  
+# if input is list or multidimensional, but targetCols has length 1, is an error. 
+
+# note: If uncareful, preserveNames=TRUE can cause infinite loop  # TODO:  insert safetybreak
+
+  ## ERROR CHECK
+  if (length(input) != length(targetCols))
+    stop("length(input) and length(targetCols) do not match")
+
+  ## If there are no names to preserve, then adjust the flag accordingly
+  ## If there are target names, but not list names, then 
+  if (is.null(names(input))) {
+    if (is.null(names(target))) {
+          preserveNames <- FALSE
+    } else {
+      names(input) <- paste("L", fw0(seq(length(input)), 2), sep="_") 
+    }
+  }
+
+  # If prserve names, then call function just on names. They get reapplied at end. 
+  if (preserveNames) {
+    # OLD nms:  mapply(function(name, thelist) {t(rep(name, ncol(thelist)))}, names(input), input, SIMPLIFY=FALSE)
+    nms <- mapply(function(name, thelist) {t(paste(name, 1:ncol(thelist), sep="."))}, names(input), input, SIMPLIFY=FALSE)
+
+    targetNames <- insertListAsCols(input=nms, target=rbind(names(target)), 
+                    targetCols=targetCols, replaceOriginalTargetCol=replaceOriginalTargetCol, preserveNames=FALSE)
+  } 
+
+
+  # If we are preserving the original, then we add 1 to the index values. 
+  #  ie, rOT is 0 if replaceOriginalTargetCol is TRUE
+  rOT <- as.numeric(!replaceOriginalTargetCol)
+
+  ## length of targetcols used many times 
+  numbOfSplices <- length(targetCols)  # this variable might need a better name.  Does 'A B' have one splice (the space) or two (the A and the B)?
+
+  ## we take the amount of each padding to be the number of columns of each input
+  padAmounts <- unlist(sapply(input, ncol))
+  padAmounts[is.null(padAmounts)] <- 1  # TODO: confirm that this in fact is acceptable (and not that we are masking errors)
+  padAmounts <- padAmounts - (1-rOT)
+
+  ## Pad target with filler-columns
+
+  # a filler column of just NA's will be used for padding
+  fillerCol <- rep(NA, nrow(target))
+
+  for (i in seq_along(targetCols))  {
+    t <- targetCols[[i]]
+    ln <- padAmounts[[i]]
+
+    #------------------
+    #   This pads `target` once. Then we have to re-adjust our indicies
+    #------------------
+        target.tmp <- target[,1:t, drop=FALSE]  # was `s:t+rOT` but I dont think thats needed
+        for (j in seq(ln))
+          target.tmp <- cbind(target.tmp, fillerCol)
+
+        # if we just padded the last columns of target, then just replace target, else append appropriately
+        if (t < ncol(target)) {
+          target <- cbind(target.tmp, target[,(t+1):ncol(target), drop=FALSE])  
+        } else {
+          target <- target.tmp 
+        }
+
+
+        # increment all targetCols beyond the i'th one by the number of reps, so long as there are any left
+        if (i < numbOfSplices)
+          targetCols[(i+1):numbOfSplices] <- targetCols[(i+1):numbOfSplices] + ln
+    #------------------    
+  } # end for-loop
+
+
+  # Shift target Cols according to whether we are preserving column in current spot or not
+  targetCols <- targetCols + rOT  # shift over 1 if we are preserving the original
+
+           # # make a matrix of indexes, we will iterate over each row. 
+           # indxs <- t(mapply(seq, from=targetCols, to=targetCols+padAmounts-rOT))  # Note that padAmounts has already been adjusted by rOT  
+ # OLD     
+           # # Insert the input columns in their appropriate spots in the target 
+           # for (i in seq_along(padAmounts)) {
+           #   target[ indxs[i, ] ] <- input[[i]]   # or...   <- apply(input[[i]], 2, function(x) x)
+           # }
+
+  # make a matrix of indexes, we will iterate over each row. 
+  indxs <- mapply(seq, from=targetCols, to=targetCols+padAmounts-rOT, SIMPLIFY=FALSE) # Note that padAmounts has already been adjusted by rOT 
+
+  # Insert the input columns in their appropriate spots in the target 
+  for (i in seq_along(padAmounts)) {
+    target[ indxs[[i]] ] <- input[[i]]   # or...   <- apply(input[[i]], 2, function(x) x)
+  }
+
+  # cleanup names of `target` and remove last NA of `targetCol`
+  if (preserveNames) {
+    names(target) <-  targetNames
+  } else {
+    names(target) <- 1:ncol(target)  
+  }
+
+  # return modified target
+  return(target)
+
+}
+
+
 
 #--------------------------------------------
 
@@ -593,15 +741,16 @@ dosDir <- function(wrkDir, gitData=FALSE, mkdir=FALSE) {
 
   # if flagged, data dir will be in different directory
   if (gitData)
-    vals[[1]] <- sub("/git/", "/gitData/", eval(vals[[1]], envir=parent.frame()))
+#    vals[[which(grp=="data")]] <- sub("/git/", "/gitData/", eval(vals[[1]], envir=parent.frame()))
+     vals[[which(grp=="data")]] <- sub("/git/", "/gitData/", vals[[which(grp=="data")]])
+
 
   # if flagged, create directories if they do not exist
   if (mkdir)
-    sapply(path.expand(vals), dir.create, showWarnings=F)
+    sapply(path.expand(vals), dir.create, showWarnings=FALSE, recursive=TRUE)
 
   # assign vals to appropriate var names in the calling environment                  
   mapply(assign, vars, vals, MoreArgs=c(pos=parent.frame()))
-
 }
  
 #--------------------------
