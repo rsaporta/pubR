@@ -1333,17 +1333,19 @@ formulasList <- function(dat, yName="y", VARS.list=NULL, interact=TRUE, intercep
   if (is.null(VARS.list))
     VARS.list <- allPosCombsList(dat[colnames(dat) != yName], 1:2)
   
-  tilde   <- ifelse(intercept, "~ 1", "~ -1")
+  tilde   <- ifelse(intercept, "~ 1 + ", "~ -1 + ")
   vars    <- colnames(dat[colnames(dat) != yName])
   #  datName <- as.character(match.call()[[2]])  # NOT NEEDED
 
   formulasList <- lapply(VARS.list, function(varsIndex)
                      apply(varsIndex, 1, function(vec) 
-                        as.character(paste(c( paste(yName, tilde), vars[vec]), collapse=plusstar), env=parent.frame(3)) 
+                        # the mess with the vec[[1]] is necessary to accomadate the + in tilde, which is necessary for interact=TRUE
+                        as.character(paste(c( paste(yName, tilde, vars[vec[[1]]]), vars[vec[-1]]), collapse=plusstar), env=parent.frame(3)) 
                     ))
 
   formulasList
 }
+
 
 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
