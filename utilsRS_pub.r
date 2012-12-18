@@ -1,3 +1,4 @@
+
 # for broken keyboard with no \ key
 nl <- "\n"
 or <- "  |  "
@@ -448,24 +449,31 @@ nestedIndx <- function(this, pre=NULL, thisdepth=0) {
 
 
 
-fw0 <- function(num, digs=NULL, mkSeq=TRUE)  {
+fw0 <- function(num, digs=NULL, mkseq=TRUE)  {
   ## formats digits with leading 0's. 
   ## num should be an integer or range of integers.
-  ## if mkSeq=T, then an num of length 1 will be expanded to seq(1, num).   
+  ## if mkseq=T, then an num of length 1 will be expanded to seq(1, num).   
+  #
+  # Note that if num is a list, digs will not be automatically compared across the list, and therefore should be manually slected. 
 
   # TODO 1:  put more error check
-  if (is.list(num))
-    lapply(num, fw0)
 
-  if (!is.vector(num)) {
+  # when num is a list, call recursively.  mkseq should not expand the list into seq, unless specifically user sets flag or entire list is just length one element
+  if (is.list(num))
+    return(lapply(num, fw0, digs=digs, mkseq=ifelse(missing(mkseq), !length(num) > 1, mkseq)))
+
+if (!is.vector(num) & !is.matrix(num)) {
     stop("num should be integer or vector")
   }
+
+  # capture the dims and we will put it back
+  dims <- dim(num)
 
   # convert strings to numbers
   num <- as.numeric(num)
 
-  # If num is a single number and mkSeq is T, expand to seq(1, num)
-  if(mkSeq && !length(num)>1)
+  # If num is a single number and mkseq is T, expand to seq(1, num)
+  if(mkseq && !length(num)>1)
     num <- (1:num)
 
   # number of digits is that of largest number or digs, whichever is max
@@ -475,16 +483,22 @@ fw0 <- function(num, digs=NULL, mkSeq=TRUE)  {
   posSpace <- ifelse(sign(max(num)) != sign(min(num)), " ", "")
 
   # return: paste appropriate 0's and preface neg/pos mark
-  sapply(num, function(x) ifelse(x<0, 
+  ret <- 
+    sapply(num, function(x) ifelse(x<0, 
     paste0("-", paste0(rep(0, max(0, digs-nchar(abs(x)))), collapse=""), abs(x)),
     paste0(posSpace, paste0(rep(0, max(0, digs-nchar(abs(x)))), collapse=""), x)
     ))
+
+  # put back in original form.  ie, make it a matrix if it was originally. Otherwise, this will just be NULL
+  dim(ret) <- dims
+
+  return(ret)
 }
 
 #-----------------------------------------------
 
 ## THIS IS THE OLDER INTERPRETATION OF fw0. 
-## SPECIFICALLY FOR HOW fw(199, digs=2) 
+## SPECIFICALLY FOR HOW IT HANDLES fw(199, digs=2) 
 fw0.older <- function(obj, digs=NULL)  {
   ## formats digits with leading 0's. 
   ## obj should be an integer or range of integers.  
@@ -696,6 +710,16 @@ insert <- function(lis, obj, pos=0, objIsMany=FALSE) {
   } else {
     c(lis[1:pos-1], obj, lis[pos:leng])
   }
+}
+
+
+#--------------------
+
+sapply.preserving.attributes = function(l, ...) {
+# by @Owen from http://stackoverflow.com/questions/7698797/why-does-mapply-not-return-date-objects
+    r = sapply(l, ...)
+    attributes(r) = attributes(l)
+    r
 }
 
 #--------------------
@@ -1001,17 +1025,36 @@ pgDisconnectAll <- function(drv=dbDriver("PostgreSQL")) {
   }
 }
 
-replaceBadCharsUnderscore <- function(str, WhiteList=NULL){
-  # replaces any none-standard chars with '_'
-  # eg: "Sigur RÃ³s"  ==>  "Sigur R__s"
 
-  str <- as.character(str)
-  okChars <- c(LETTERS,letters, 0:9,"_","-"," ", WhiteList)
+mgsub <- function(pattern, replacement, x, ..., fixed=TRUE) {
+# like an mapply on gsub, but done iteratively. 
 
-  for (i in 1:nchar(str)) {
-    substr(str, i, i) <- ifelse(substr(str, i, i) %in% okChars,  substr(str, i, i), "_")
-  }
-  return(str)
+  if(length(pattern) != length(replacement))
+    stop("pattern and replacement differ should be the same length")
+
+  ## TODO: add recycling and error-check 
+
+  for(i in 1:length(pattern))
+    x <- gsub(pattern[i], replacement[i], x, ..., fixed=fixed)
+  
+  return(x)
+}
+
+
+cleanChars <- function(text, replacement="_", Whitelist=NULL) {
+  # wrapper for gsub, with regex pre-composed
+  # replaces all non-basic chararcters with replacement (underscore by default)
+  # Whitelist is non-functional for now  # TODO
+
+  if (!is.null(Whitelist))
+    stop("Whitelist is non-functional")
+
+  Simple_regex <- "[^0-9a-zA-Z -.]"
+  gsub(Simple_regex, replacement, text)
+}
+
+replaceBadCharsUnderscore <- function(str, WhiteList=NULL) {
+  stop ("use cleanChars() instead")
 }
 
 
@@ -1021,44 +1064,139 @@ ts <- timeStamp <- function(seconds=FALSE) {
 
     if(seconds)
         return(format(Sys.time(), "%Y%m%d_%H%M%S"))
-    
-
     return(format(Sys.time(), "%Y%m%d_%H%M%S"))
 }
 
 
+detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
+  # detects whether an assignment operator is present. 
+  # Returns T if detected. F if not detected. 
+  #  obj can be list-like
+  # if single=TRUE, returns a single element  (ie, any(unlist(.)) )
+  # simplify is passed through to the sapply call.  Single will override simplify
 
-saveit <- function(obj, directory=getwd(), createSubDir=TRUE)  {
-  ## saves obj to an .Rda to a file of 
-  ##     the same name, with a time stamp
-  ##     in location: directory
-  ##     createSubDir:  if TRUE, will create subdirectory data_bak 
-  ##                inside directory and use that folder. (if alreaddy exists, will just use)
-  ##
-  ## returns:  the path/to/file.Rda where obj was saved
-  ##
-  ## TODO:  The Rdata file names the data 'obj'.  I dont think this can be fixed, other than to load the .Rda and then myName <- obj;  rm(obj, pos=#).  
-  ##   this function is useful primarily for a quick save with a timestamp in a useful directory. 
+  # list of operators to search for
+  ops <- c("<-", "<<-", "->", "->>")
 
-  #cleanup the strings for a proper filename
-  objName <- replaceBadCharsUnderscore(substitute(obj))
-  
-  # make sure no ending slash, as it will be added later
-  if (isSubstrAtEnd(directory,"/")) {
-      directory <- substr(directory,1,nchar(directory)-1)
-  }
+  # compute grepl
+  ret <- sapply(noGood, grepl, obj, simplify=simplify)
 
-  # use subdirectory data_bak unless indicated not to  (create it if needed)
-  if (createSubDir) {
-    dir.create(file.path(directory, "data_bak"), showWarnings=FALSE)
-    directory <- paste0(directory, "/data_bak")
-  }
+  # return value
+  if (single)
+    return(any(unlist(ret)))
+  return(ret)
 
-  # create the filename, then save it
-  fileName <- paste0(directory,"/",objName,"_",ts(),".Rda")
-  save(obj, file=fileName)
-  return(fileName)
 }
+
+
+#==========================================================================#
+#--------------------------------------------------------------------------#
+#                       SAVEIT & SAVETHEM & JESUS                          #
+#                                                                          #
+#   depends: detectAssignment, ts, as.path                                 #
+#__________________________________________________________________________#
+
+
+  saveit <- function(obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1)  {
+    ##  Like savethem() but only takes a single obj argument
+    ##     The advantage of using saveit() is not having to 
+    ##     type `dir=...`.   
+    ##     Yep, that is all. (this func also was written first then modified to get savethem()) 
+    ##     
+    ## saves obj to file of type .Rda and with 
+    ##     name of file same as name of obj + time stamp
+    ##     in location: dir
+    ##     subDir:  if TRUE, will create subdirectory data_bak 
+    ##                inside dir and use that folder. (if alreaddy exists, will just use)
+    ##
+    ## returns:  the path/to/file.Rda where obj was saved
+
+
+    # get object from the parent environment
+    objName <- as.character(match.call()[[2]])
+
+    #----- ERROR CHECKS ------#
+    # If multiple arguments passed to saveit, this may detect the mistake. 
+    if(!is.character(dir) || !is.logical(subDir)) 
+      warning("Did you mean to use savethem() instead of saveit()?")
+
+    # If any of the assignment operators are found in the list, throw an error
+    if(detectAssignment(objName)) 
+      stop("Cannot assign in the call to this function.")
+    #----- ERROR CHECKS ------#
+
+
+
+    # use subdirectory data_bak unless indicated not to  (create it if needed)
+    if (subDir) {
+      dir <- as.path(dir, "data_bak")
+    }
+
+    # Create dir if needed
+    dir.create(dir, recursive=TRUE, showWarnings=FALSE)
+
+    # create the filename, cleaning objName of bad chars
+    fileName <- paste0(cleanChars(objName),"_",ts(),".Rda")
+    fileWithPath <- as.path(dir,fileName)
+      
+    # Save the object
+    do.call(save, args=c(list(objName), envir=parent.frame(pos+1), file=fileWithPath) )
+    
+    # return the path/to/file
+    return(fileWithPath)
+  }
+
+  #------------------------------------------------------------------------#
+
+  savethem <- jesus <- function(..., dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=sub, pos=1, sub=TRUE)  {
+    ##  Like saveit() but can take multiple objects as arguments
+    ##
+    ##     saves objects passed as (...) arguments to file of type .Rda and with 
+    ##     name of file same as name of obj + time stamp
+    ##     in location: dir
+    ##     subDir:  if TRUE, will create subdir data_bak 
+    ##                    inside dir and use that folder. (if alreaddy exists, will just use)
+    #S     sub:  a synonym for subDir. (since use of ... does not allow for partial matches) 
+    ##
+    ## returns:  the path/to/file.Rda where obj was saved
+
+    # get objects from dots
+    objNames <- as.list(as.character(substitute(list(...)))[-1L])
+
+    #----- ERROR CHECKS ------#
+    # If any of the assignment operators are found in the list, throw an error
+    if(detectAssignment(objNames)) 
+      stop("Cannot assign in the call to this function.")
+    #----- ERROR CHECKS ------#
+
+
+    # if flag is true, add appropriate subdir
+    if (subDir) {
+      dir <- as.path(dir, "data_bak")
+    }
+
+    # Create dir if needed
+    dir.create(as.path(dir), recursive=TRUE, showWarnings=FALSE)
+
+    # create the filename, cleaning objNames of bad chars
+    fileName <- paste0(cleanChars(objNames),"_",ts(),".Rda")
+    fileWithPath <- as.path(dir,fileName)  # convert to list for use with do.call later
+      
+    # Save the object
+    mapply(function(obj, thefile)
+              # note that with the save+do.call we are going in an extra two environments, hence pos + 2  (also, tested with pos+1, pos+3, both wrong)
+              do.call(save, args=list(obj, envir=parent.frame(pos+2), file=thefile) )  # pos + 3 will be off if 
+          , objNames, fileWithPath)
+
+    
+    # return the path/to/files
+    return(fileWithPath)
+  }
+
+
+#__________________________________________________________________________#
+#==========================================================================#
+
 
 plength <- printlength <- function(opt=200) {
 ## Changes the environment's setting for how many elements to output for print command
@@ -1092,7 +1230,7 @@ saveToFile_TabDelim <- function(obj, directory=getwd())  {
   ## returns:  the path/to/file.Rda where obj was saved
 
   #cleanup the strings for a proper filename
-  objName <- replaceBadCharsUnderscore(substitute(obj))
+  objName <- cleanChars(substitute(obj))
   if (isSubstrAtEnd(directory,"/")) {
       directory <- substr(directory,1,nchar(directory)-1)
   }
@@ -1488,6 +1626,62 @@ paraLineChop <- function(so, length=NULL, lines=NULL, justSize=FALSE) {
 }
 #_________________________________________#
 
+  #---------------------------------------#
+ #_________________________________________#
+###  GRAB COEFFICIENTS TABLE FROM SUMMARY ###
+
+coefTable <- function(model) { 
+  # captures the summary output table and returns it in a data.frame
+
+  require(stringr)
+
+  # this param indicates p-value less than machine precision. 
+  #  we need to swap it out for the string splicing in read.table
+  machPrec <- " < 2e-16"
+  machPrec.replace <- "2e-16"
+
+  # form a table of the pvalues, etc
+  mout <- capture.output(summary(model))
+
+  # find borders to the table, based on coefficients and ---   
+  table.top <- grep("^Coefficients:", mout)  + 1
+  table.bottom <- which(mout == "---")  - 1
+
+  # if couldn't find bottom, look for next clue
+  if (identical(table.bottom, numeric(0))) 
+    table.bottom <- grep("^Residual standard error", mout) - 2
+ 
+  # if still 0, count up 4 from bottom and issue warning
+  if (identical(table.bottom, numeric(0))) {
+    table.bottom <- length(mout) - 4
+    warning("couldnt find exact bottom of table. Please confirm manually")
+  }
+
+  # get table
+  m.table <- mout[(table.top+1):table.bottom]
+  m.table <- sub("    $", " -- ", m.table)                     # clean significance column
+  m.table <- sub(machPrec, machPrec.replace, m.table)           # clean p-value column
+  m.table <- read.table(text=m.table, stringsAsFactors=FALSE)  # convert to matrix/datafrmae
+
+  # Column Names
+  cnames <- mout[table.top]
+  cnames <- str_trim(mgsub(c("Std. Error", "t value", "Pr(>|t|)"), c("SE", "tVal", "pVal"), cnames)) 
+  cnames <- c("Predictor", strsplit(cnames, " ")[[1]])
+
+  # check if significance column is present.  (ie, there should be one more column than cnames)
+    sigPresent <- ncol(m.table) > length(cnames)
+
+  # add column names to table, adding Signif if column present
+  colnames(m.table) <- if(sigPresent) c(cnames, "Signif")  else cnames
+  
+  # make signif column factor, if present. 
+  if (sigPresent)
+    m.table$Signif <- factor(m.table$Signif, levels=c("***", "**", "*", ".", "--"))
+
+  return(m.table)
+}
+
+#_________________________________________#
 
 
 

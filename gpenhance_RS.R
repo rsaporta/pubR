@@ -1,4 +1,5 @@
 
+
 ##############################################################################
 ##+------------------------------------------------------------------------+##
 ##                                                                          ##
@@ -51,7 +52,7 @@
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##                                                                                                       ##
-##                            pgTitle & vertbar                                                          ##
+##                            pgTitle & vertbar & borderize                                              ##
 ##                                                                                                       ##
 ##-------------------------------------------------------------------------------------------------------##
 
@@ -81,6 +82,40 @@ vertbar <- function(vert=TRUE, shift=0, thick=1, color="black") {
   }
 }
 
+
+borderize <- function(plotObj, thick=2, color="black", alpha=1, color2="grey", thick2=3) {
+  # thickness should be a value between (1, 100)
+  # alpha should be between (0, 1)
+
+  # error check for correct input
+  if (thick > 100 || thick < 0)
+    warning("thick should be between (0, 100)")
+
+  if (alpha > 1 || alpha < 0)
+    warning("thick should be between (0, 100)")
+
+  # these lines could be modified for separate width/height thicknesses
+  wd <- ht <-  (100 - (thick+thick2/4)) / 100
+  x <- (1 - wd)  / 2 
+  y <- (1 - ht) / 2
+
+  # create a solid rectangle.  The plot will go over it. 
+  grid.rect(x=0, y=0, height=1, width=1, just = c("left", "bottom"), 
+            gp=gpar(fill=color, alpha=alpha, col=color2, lwd=unit(thick2, "npc")))
+
+  # create the viewport
+  vp.inner <- viewport(height=unit(ht, "npc"), width=unit(wd, "npc"), just=c("left","bottom"), y=y, x=x)
+
+  print(plotObj, vp=vp.inner)
+
+  # note: 
+  # Note that you can also modify `plot.background` and `panel.background` with theme() in ggplot2.  
+  # However, this will impact your labels and legend, depending on the thickness of border, font size etc. eg: 
+  #     plot.bg  <- theme(plot.background=element_rect(color="red", size=20))
+  #     panel.bg <- theme(panel.background=element_rect(color="blue", size=20))
+  #     plotObj + panel.bg + plot.bg    #  red border is `plot`,  blue border is `panel`
+
+}
 
 
 
@@ -200,6 +235,14 @@ ggNewCanvass <- function(scale=100) {
 
 
 
+#------------------------------------------------ 
+# density plot at edge of graph
+
+density <- geom_rug(col=rgb(.05, .3,.2,alpha=.2))
+
+#------------------------------------------------ 
+
+
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##                                                                                                       ##
 ##                            qqplot:                              ##
@@ -299,3 +342,113 @@ multiplot <- function(..., plotlist=NULL, file, cols=2, byrow=TRUE, layout=NULL)
     }
   }
 }
+
+
+
+
+
+#--------------------------------------------------#
+#                                                  #
+#   Functions to add equations to plot as texts    #
+#                                                  #
+#__________________________________________________#
+
+
+#--------------------------------------------------#
+    ## Example Usage: 
+
+    #   gtxt_equation(model01)
+    #   gtxt_equation(model01, xpos=-.5, ypos=.62)
+
+    ## LONGER EXAMPLE
+
+    #   x <- sample(1:30, 5)
+    #   y <- (3) + (2/3 * x) + (rnorm(x, 0, 0.1))
+    #   model1 <- lm(y~x)
+
+
+    # Three different ways to call it
+
+        # p2 <- qplot(y=y, x=x)
+        # ptext <- gtxt_equation(model1)
+        # p2 + ptext
+
+        # p2 <- qplot(y=y, x=x)
+        # p2 + gtxt_equation(model1)
+
+        # p2 <- qplot(y=y, x=x) + 
+        #       gtxt_equation(model1)
+
+#--------------------------------------------------#
+
+
+
+  # Generic form
+  gtxt_equation <- function(m, ...)
+  # m should be a model. For now, just a lm. 
+     UseMethod("gtxt_equation")
+
+    ## TODO: add other methods
+
+
+  gtxt_equation.lm <- function(m, xpos=.2, ypos=.85) {
+  # m is a linear model
+  # xpos/ypos  should be between (-1, +1), although not required. 
+
+    # Grab the variable information from the model. 
+    vars <- m$model
+    names(vars) <- names(m$model)
+      
+    #---------------------------#
+    # CLEAN THiS UP FOR MULTIPLE VARS
+      y <- vars[1]  # not using '[[' to maintain list-str & name
+      x <- vars[2] 
+      # modeltype is possibly a method.  ie, in this case, lm. 
+    #---------------------------#
+
+
+    #-----------------------------#
+    ## COMPUTE XPOS, YPOS & TEXT ##
+    #-----------------------------#
+      ypos <- min(y) + (ypos * diff(range(y)) )
+      xpos <- min(x) + (xpos * diff(range(x)) )
+
+      labelText <- lm_eqn_to_char(m)
+    #---------------------------#
+
+
+        # This is what we would like to return
+    dat <- data.frame(xpos, ypos, eval(labelText))  
+
+    # as.data.frame(t(c(unlist(vars), labelText)))
+    geom_text(data=dat, aes(x = xpos, y = ypos, label = labelText), parse = TRUE)
+  }
+
+  #---------------------------#
+  # CREATE THE EQUATION TEXT  #
+  #---------------------------#
+
+  # source: http://stackoverflow.com/questions/7549694/ggplot2-adding-regression-line-equation-and-r2-on-graph
+  # authors:  @Ramnath, with cleanup by @Jayden.
+
+    lm_eqn_to_char = function(m) {
+      # m is a model
+
+      require(grDevices)   # plotmath
+
+      ## TODO:  use variable names instead of "y" and "x" in eq. 
+      # get variable names
+      vars <- names(m$model)
+
+      l <- list(a  = format(coef(m)[1], digits = 2),
+                b  = format(abs(coef(m)[2]), digits = 2),
+                r2 = format(summary(m)$r.squared, digits = 3));
+
+      if (coef(m)[2] >= 0)  {
+        eq <- substitute(italic(get(y)) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,l)
+      } else {
+        eq <- substitute(italic(y) == a - b %.% italic(x)*","~~italic(r)^2~"="~r2,l)    
+      }
+
+      as.character(as.expression(eq));                 
+    }
