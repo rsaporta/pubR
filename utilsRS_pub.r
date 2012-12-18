@@ -1267,6 +1267,87 @@ retTst <- function(n) {
   return(ret)
 }
 
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+allPosCombsList <- function(dat, choose=seq(ncol(dat)), yName="y") {
+## returns list of column indicies
+
+    #----------------------------------------------------------------------#
+    ## NOTE TO SELF
+    ##   CANNOT DO THIS.   dat must not contain y.  otherwise the columns will not match up
+    ## 
+    ##  This will simply have to be different from allModels for now
+    ##
+    # if (!any(colnames(dat) == yName)) 
+    #   warning(yname, " not found in the colnames of dat; using whole dataframe.")
+    #
+    # # remove y-column 
+    # dat <- dat[, colnames(dat) != yName]
+    #----------------------------------------------------------------------#    
+    
+    n <- ncol(dat)
+
+    # x <- c(rep(TRUE, 3), rep(FALSE, n-3))
+    lapply(choose, function(r) cbind(permutations(n, r)))
+}
+
+#  allPosCombsMatrix.TakesTooLong <- function(dat, choose=-1) { 
+#  ## Creates a matrix where each row is a logical-index corresponding  
+#  ## to the columns (ie, variables) of dat 
+#  ## Where the rows contain all possible 'choose'-combinations of the variables 
+#  ##   
+#  ## dat is a dataframe of response variables 
+#  ## choose is a vector, indicating HOW MANY variables to co-select 
+#  ##   eg  choose=3  will give only rows of 3-co-selections 
+#  ##       choode=1:3 will give only rows of 1, 2, or 3 co-selections 
+#  ##   choose=-1 selects ALL rows 
+#   
+#      n <- ncol(dat) 
+#   
+#      matr <- matrix(rep(c(TRUE, FALSE), n), nrow=n, byrow=TRUE) 
+#      matr <- do.call(expand.grid, split(matr, row(matr))) 
+#   
+#      # reverse the columns for neatness 
+#      matr <- matr[, n:1] 
+#   
+#      # add names 
+#      colnames(matr) <- colnames(dat) 
+#   
+#      # if choose is flagged as -1, select all rows, otherwise only those requested 
+#      whichRows <- if (all(choose == (-1))) seq(2^n) else rowSums(matr) %in% choose 
+#   
+#      # return 
+#      matr[whichRows, ] 
+#   
+#  } 
+
+
+
+formulasList <- function(dat, yName="y", VARS.list=NULL, interact=TRUE, intercept=TRUE)  {
+  # creates list of formula strings from a dataframe and list of variable indexes
+  #   Note:  VARS.INDEX should reference dat WITHOUT y present. 
+
+  plusstar <- if (interact) "*" else "+"
+
+  if (is.null(VARS.list))
+    VARS.list <- allPosCombsList(dat[colnames(dat) != yName], 1:2)
+  
+  tilde   <- ifelse(intercept, "~ 1", "~ -1")
+  vars    <- colnames(dat[colnames(dat) != yName])
+  #  datName <- as.character(match.call()[[2]])  # NOT NEEDED
+
+  formulasList <- lapply(VARS.list, function(varsIndex)
+                     apply(varsIndex, 1, function(vec) 
+                        as.character(paste(c( paste(yName, tilde), vars[vec]), collapse=plusstar), env=parent.frame(3)) 
+                    ))
+
+  formulasList
+}
+
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 logscale <- function(range=2:5, intervals=2, base=10)  {
 # returns a sorted vector of powers of the base. 
 # range is a vector of powers
