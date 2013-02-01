@@ -18,18 +18,25 @@
     oldLevsLength <- length(levels(get(dtName, envir=parent.frame(1))[[column]]))
     newLevsLength <- length(newlevs)
 
+    # If levels is wrong size, we will give feedback as to the difference in size. 
     diffs <- newLevsLength - oldLevsLength
+    
+    # newlevs is too big 
     if (diffs > 0) {
       stop ("New levels has ", diffs, " level", ifelse(diffs==1, "", "s"), " too many." )
+    
+    # newlevs is too small
     } else if (diffs < 0) {
       stop ("New levels has ", -diffs, " level", ifelse(diffs==-1, "", "s"), " too few." )
-    } else if (diffs != 0) {  # just in case
+    
+    # this clause should never hit, but putting it in just to be safe. 
+    } else if (diffs != 0) { 
       stop ("Something went wrong. Unsure what.")
-    } else {
-
-      return(setattr( get(dtName, envir=parent.frame(1))[[column]], 
-              "levels",newlevs))
     }
+
+    # change levels using setattr();  passing through the return value.  
+    return(setattr( get(dtName, envir=parent.frame(1))[[column]], 
+              "levels",newlevs))
   }
 
 
