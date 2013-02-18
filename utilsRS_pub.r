@@ -1,39 +1,90 @@
 
-# for broken keyboard with no \ key
-nl <- "\n"
-or <- "  |  "
-
-# useful shorthand
-len <- length
-p <- paste0
-
-# quick & dirty for pdf output testing
-d <- dev.off
-dpf <- function(d=outDir, f="test.pdf") pdf(as.path(d, f))
 
 #------------------------------------------------------
-TFtest <- function(fullStop=TRUE, dontWarn=FALSE) {
-# checks if the vars T & F have been assigned values other than TRUE / FALSE
-# Arguments: 
-#   fullStop:  Flag indicating whether to stop with error, or simply issue warning
-
-  if (!(identical(T, TRUE) && identical(F, FALSE)))
-    if (fullStop) {
-      stop("T/F have been reassigned non-boolean values: \n\tT == ", T, "\n\tF == ", F)
-    } else {
-      if (!dontWarn)
-        warning("T/F have been reassigned non-boolean values, which may cause problems: \n\tT == ", T, "\n\tF == ", F)
-      return(FALSE)
-    }
-  return(TRUE)
-}
-
-## Practical use for TFtest() is confirming that the objects T/F have appropriate values
-##  ie, I would generally include this at the top of a script
-      # if (!TFtest(FALSE, TRUE))
-      #    T <- !(F <- FALSE)
-
-
+#   THESE ARE THE FUNCTIONS PRESENT IN THIS FILE      
+#------------------------------------------------------
+#------------------------------------------------------
+    #   JavaTest ( stopRun=TRUE, runInit=TRUE ) 
+    #   isErr ( expression ) 
+    #   isNumber ( x ) 
+    #   showProg ( flag, outp, header=FALSE, done=FALSE, tb=1 ) 
+    #   depth ( x, counter=0 ) 
+    #   listStr ( obj, showValues=TRUE ) 
+    #   longestLength ( obj, currentMax=0 ) 
+    #   listFlatten ( obj, filler=NA ) 
+    #   tableFlatten ( tableWithLists, filler="" ) 
+    #   insertListAsCols ( input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE ) 
+    #   insertListAsCols.list ( input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE ) 
+    #   findGroupRanges ( booleanVec ) 
+    #   nestedIndx ( this, pre=NULL, thisdepth=0 ) 
+    #   fw0 ( num, digs=NULL, mkseq=TRUE ) 
+    #   fw0.older ( obj, digs=NULL ) 
+    #   fw ( x, dec=4, digs=4, w=NULL, ... ) 
+    #   fw3 ( x, dec=3, digs=3, w=NULL, ... ) 
+    #   fwp ( x, dec=2, sep=" " ) 
+    #   clipPaste ( flat=TRUE ) 
+    #   meantrm ( x, p=6 ) 
+    #   CMT <- getCMT <- getClassModeTypeof ( obj ) 
+    #   jythonIsGlobal (  ) 
+    #   python ( jythonStatement ) 
+    #   pythonGet ( pythonObj ) 
+    #   pythonSet ( rObj ) 
+    #   pythonSetDiffName ( pythonObj, rObj ) 
+    #   pyParse ( strToParse ) 
+    #   form ( x, dig=3 ) 
+    #   getNCMT <- getNameClassModeTypeof ( obj ) 
+    #   countNA01s ( vec ) 
+    #   insert ( lis, obj, pos=0, objIsMany=FALSE ) 
+    #   as.path ( ..., fsep=.Platform$file.sep, expand=TRUE ) 
+    #   dosDir ( wrkDir, gitData=FALSE, mkdir=FALSE ) 
+    #   makeDictFromCSV ( csvFile ) 
+    #   isSubstrAtEnd ( x, pattern, ignorecase=TRUE ) 
+    #   s <- smry ( x, rows=6, cols=6, cmt=TRUE ) 
+    #   c4 ( x, rows=20, cols=4, cmt=TRUE ) 
+    #   topropper ( x ) 
+    #   qy <- quity ( dir='~/' ) 
+    #   qn <- quitn ( dir='~/' ) 
+    #   tbs ( n, nl=FALSE ) 
+    #   miniframe ( data, rows=200 ) 
+    #   makeDictWithIntegerKeys ( KVraw, applyLabels=TRUE ) 
+    #   chkp <-chkpt ( logStr, chkpOn=TRUE, final=FALSE ) 
+    #   pgDisconnectAll ( drv=dbDriver("PostgreSQL") ) 
+    #   mgsub ( pattern, replacement, x, ..., fixed=TRUE ) 
+    #   cleanChars ( text, replacement="_", Whitelist=NULL ) 
+    #   replaceBadCharsUnderscore ( str, WhiteList=NULL ) 
+    #   timeStamp ( seconds=FALSE ) 
+    #   detectAssignment ( obj, single=TRUE, simplify=FALSE ) 
+    #   saveit ( obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1, addTimeStamp=TRUE ) 
+    #   savethem <- jesus ( ..., dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=sub,                                  pos=1, sub=TRUE, stampDir=TRUE, stampFile=FALSE, summary=TRUE ) 
+    #   mkSaveFileNameWithPath ( objName, dir, pos=2, addTimeStamp=FALSE, ext=".Rda" ) 
+    #   dimToString ( objName, pos=2, prefix="-" ) 
+    #   plength <- printlength ( opt=200 ) 
+    #   reminder (  ) 
+    #   retTst ( n ) 
+    #   allPosCombsList ( dat, choose=seq(ncol(dat)), yName="y" ) 
+    #   allPosCombsMatrix.TakesTooLong ( dat, choose=-1 ) 
+    #   formulasList ( dat, yName="y", VARS.list=NULL, interact=TRUE, intercept=TRUE ) 
+    #   logscale ( range=2:5, intervals=2, base=10 ) 
+    #   asCurr ( x, decim=2, noSpacesAfterSymb=1, symbol="$" ) 
+    #   lP <- listPacker ( receiver, ... ) 
+    #   previouswd (  ) 
+    #   homewd (  ) 
+    #   devwd (  ) 
+    #   gitwd (  ) 
+    #   msdwd (  ) 
+    #   devsource ( file, dir="~/Dropbox/dev/R/!ScriptsR/" ) 
+    #   gitsource ( file, dir="~/git/misc/rscripts/" ) 
+    #   homesource ( file, dir="~/" ) 
+    #   txr (  ) 
+    #   source.url ( ... ) 
+    #   extendToMatch ( source, destin ) 
+    #   rmDupLines ( obj, trim=T ) 
+    #   cordl ( ..., length=NULL, justSize=FALSE, crop=TRUE, chop=TRUE ) 
+    #   paraLineChop ( so, length=NULL, lines=NULL, justSize=FALSE ) 
+    #   coefTable ( model ) 
+    #   tbls (  ) 
+    #   colquote ( colNamesAsStrings ) 
+#------------------------------------------------------
 #------------------------------------------------------
 
 
@@ -74,7 +125,7 @@ isErr <- function(expression)  {
 
 isNumber <- function(x)  {
 # the purpose of this function is to avoid the warnings that 
-# come with `is.numeric(as.numeric(x))` when x is not a number.
+# come with 'is.numeric(as.numeric(x))' when x is not a number.
 
   if (is.list(x))
     return(lapply(x, isNumber))
@@ -212,7 +263,7 @@ listFlatten <- function(obj, filler=NA) {
     bind <- TRUE
 
   # If all are either matrix- or vector-like 
-  }  else if (all(matLike | vecLike))   {  # TODO:  Double check this.  I had this with `&` before. I think that was incorrect. 
+  }  else if (all(matLike | vecLike))   {  # TODO:  Double check this.  I had this with '&' before. I think that was incorrect. 
 
     maxLng <- max(sapply(obj[matLike], ncol), sapply(obj[vecLike], length))
 
@@ -231,7 +282,7 @@ listFlatten <- function(obj, filler=NA) {
     if (is.data.frame(obj) && length(obj) == ncol(obj))
       return(obj)
 
-    # Otherwise, flatten `obj` with rbind. 
+    # Otherwise, flatten 'obj' with rbind. 
     ret <- (do.call(rbind, obj))
     colnames(ret) <- paste0("L", fw0(1:ncol(ret), digs=2))
     return(ret)
@@ -251,7 +302,7 @@ listFlatten <- function(obj, filler=NA) {
 
 tableFlatten <- function(tableWithLists, filler="") {
 # takes as input a table with lists and returns a flat table
-#  empty spots in lists are filled with value of `filler`
+#  empty spots in lists are filled with value of 'filler'
 #
 # depends on: listFlatten(.), findGroupRanges(.), fw0(.)
 
@@ -358,9 +409,9 @@ insertListAsCols.list <- function(input, target, targetCols, replaceOriginalTarg
     ln <- padAmounts[[i]]
 
     #------------------
-    #   This pads `target` once. Then we have to re-adjust our indicies
+    #   This pads 'target' once. Then we have to re-adjust our indicies
     #------------------
-        target.tmp <- target[,1:t, drop=FALSE]  # was `s:t+rOT` but I dont think thats needed
+        target.tmp <- target[,1:t, drop=FALSE]  # was 's:t+rOT' but I dont think thats needed
         for (j in seq(ln))
           target.tmp <- cbind(target.tmp, fillerCol)
 
@@ -398,7 +449,7 @@ insertListAsCols.list <- function(input, target, targetCols, replaceOriginalTarg
     target[ indxs[[i]] ] <- input[[i]]   # or...   <- apply(input[[i]], 2, function(x) x)
   }
 
-  # cleanup names of `target` and remove last NA of `targetCol`
+  # cleanup names of 'target' and remove last NA of 'targetCol'
   if (preserveNames) {
     names(target) <-  targetNames
   } else {
@@ -545,9 +596,32 @@ fw3 <- function(x, dec=3, digs=3, w=NULL, ...) {
   format(x, nsmall=dec, digits=digs, width=w, ...)
 }
 
+fwp <- function(x, dec=2, sep=" ")
+# Formats as percentage
+  lapply(x, function(y) paste(fw3(100*y, dec), "%", sep=sep))
+
+
+clipPaste <- function(flat=TRUE)  {
+# returns whatsever in the clipboard
+# if flat is true, then it is collapsed into a single element 
+#    as opposed to multiple lines
+  
+  con <- pipe("pbpaste", open="r")
+  ret <- readLines(con)
+
+  if (flat)
+    ret <- paste0(ret, collapse="\n")
+
+  close(con)
+  return(ret)
+}
 
 ###############################################################
 ###############################################################
+
+# mean with paramters. Trimming top/bottom p observations (or 1/4 if too few obs present)
+meantrm <- function(x, p=6)
+  mean(x, trim=min(.25, p/length(x)), na.rm=TRUE)
 
 CMT <- getCMT <- getClassModeTypeof <- function(obj)  { 
   # Returns as a vector, the class, mode, typeof  of the obj
@@ -867,49 +941,13 @@ c4 <-function(x, rows=20, cols=4, cmt=TRUE) {
   smry(x, rows, cols, cmt)
 }
   
-
-# UPDATED NOTE TO SELF: 
-#... I BELIEVE randomRows is useless, considering sample(1:nrow(x), ...)
-randomRows <- function(x, percent=10, rows=0)  {
-  # returns a vector of random indices to x
-  # the size of the return vector is equal to rows (if not 0), or to percent * nrow(x)
-  #
-  # args: x any matrix or vec object
-  #       percent:  0 < percent < 100;  calculate rows as a percent of nrow(x);  ignored if rows > 0.
-  #       rows:  an integer, number of rows to select from x. cannot be < 0.  if == 0, then will be calculated using percent. 
-  #      
-  
-  #error check: 
-        if (length(x)==1 && mode(x)=="numeric") {
-          errmsg <- paste0("\n\tReceived a single numeric ('", x, "') when expecting a range. Using range  '1:", as.integer(x), "'' instead.\n")
-          warning (errmsg)
-          x <- 1:x
-        }
-        rows <- as.integer(rows) 
-        if (rows < 0) {
-          errmsg <- paste0("\n\tInvalid value for rows: '", rows, "'.  Using percentage (",percent, "%) instead.\n")
-          warning (errmsg)
-          rows <- 0
-        }
-        if (percent < 0 || percent > 100) {
-          errmsg <- paste0("\n\tInvalid percent value: '", percent, "'.  Using default value of 10.\n")
-          warning (errmsg)
-          percent <- 10
-        }
-  #end error check
-
-  # rx is the number of rows of x (if x is uni-dimensional, use length(x) instead)
-  rx <- ifelse(is.null(dim(x)), length(x), nrow(x))  
-
-  # if user did not indicate rows, then calculate it as a percentage of total rows 
-  if (!rows) {
-    rows <- as.integer(rx * (percent / 100))
-  }
-
-  # generate the indices 
-  indices <- sample(1:rx, rows)          # ALT distributed around median:   indices <- (as.integer(rnorm(rows, rx/2, rx/4))  %% rx)  + 1
-
-  return(indices)
+topropper <- function(x) {
+  # Makes Proper Capitalization out of a string or collection of strings. 
+  sapply(x, function(strn)
+   { s <- strsplit(strn, " ")[[1]]
+       paste0(toupper(substring(s, 1,1)), 
+             tolower(substring(s, 2)),
+             collapse=" ")}, USE.NAMES=FALSE)
 }
 
 qy <- quity <- function(dir='~/')  {
@@ -1059,12 +1097,12 @@ replaceBadCharsUnderscore <- function(str, WhiteList=NULL) {
 
 
 
-ts <- timeStamp <- function(seconds=FALSE) {
+timeStamp <- function(seconds=FALSE) {
   # basic time stamp:   20111231_2350  for Dec 31, 2012, 11:50pn
 
     if(seconds)
         return(format(Sys.time(), "%Y%m%d_%H%M%S"))
-    return(format(Sys.time(), "%Y%m%d_%H%M%S"))
+    return(format(Sys.time(), "%Y%m%d_%H%M"))
 }
 
 
@@ -1072,14 +1110,15 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
   # detects whether an assignment operator is present. 
   # Returns T if detected. F if not detected. 
   #  obj can be list-like
-  # if single=TRUE, returns a single element  (ie, any(unlist(.)) )
+  # if single=TRUE, returns a single element  (ie, any(unlist(.)) ) as opposed to a logical vector
+  #   (useuful if one bad apple makes the whole bunch unusable)
   # simplify is passed through to the sapply call.  Single will override simplify
 
   # list of operators to search for
   ops <- c("<-", "<<-", "->", "->>")
 
   # compute grepl
-  ret <- sapply(noGood, grepl, obj, simplify=simplify)
+  ret <- sapply(ops, grepl, obj, simplify=simplify)
 
   # return value
   if (single)
@@ -1092,15 +1131,16 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
 #==========================================================================#
 #--------------------------------------------------------------------------#
 #                       SAVEIT & SAVETHEM & JESUS                          #
+#                  mkSaveFileNameWithPath & dimToString                    #
 #                                                                          #
-#   depends: detectAssignment, ts, as.path                                 #
+#              depends: detectAssignment, timeStamp, as.path               #
 #__________________________________________________________________________#
 
 
-  saveit <- function(obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1)  {
+  saveit <- function(obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1, addTimeStamp=TRUE)  {
     ##  Like savethem() but only takes a single obj argument
     ##     The advantage of using saveit() is not having to 
-    ##     type `dir=...`.   
+    ##     type 'dir=...'.   
     ##     Yep, that is all. (this func also was written first then modified to get savethem()) 
     ##     
     ## saves obj to file of type .Rda and with 
@@ -1114,6 +1154,14 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
 
     # get object from the parent environment
     objName <- as.character(match.call()[[2]])
+
+    #----- EVAL IN OBJ NAME ------#
+    ## this allows the use of, eg, saveit(eval(paste0("model.", bestVal)), outDir)
+    # that is, if obj begins with eval(), then eval-parse it for the correct string
+    if(objName[[1]]=="eval")
+        objName <- eval(parse(text=objName))
+    #----- EVAL IN OBJ NAME ------#
+
 
     #----- ERROR CHECKS ------#
     # If multiple arguments passed to saveit, this may detect the mistake. 
@@ -1135,8 +1183,13 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
     # Create dir if needed
     dir.create(dir, recursive=TRUE, showWarnings=FALSE)
 
+    # Create Suffix (based on dim, if applicable, and append timeStamp if required)
+    suffix <- dimToString(objName, pos=pos+1)
+    if(addTimeStamp)
+      suffix <- paste0(suffix, "-", timeStamp())
+
     # create the filename, cleaning objName of bad chars
-    fileName <- paste0(cleanChars(objName),"_",ts(),".Rda")
+    fileName <- paste0(cleanChars(objName),suffix,".Rda")
     fileWithPath <- as.path(dir,fileName)
       
     # Save the object
@@ -1148,7 +1201,8 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
 
   #------------------------------------------------------------------------#
 
-  savethem <- jesus <- function(..., dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=sub, pos=1, sub=TRUE)  {
+  savethem <- jesus <- function(..., dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=sub, 
+                                pos=1, sub=TRUE, stampDir=TRUE, stampFile=FALSE, summary=TRUE)  {
     ##  Like saveit() but can take multiple objects as arguments
     ##
     ##     saves objects passed as (...) arguments to file of type .Rda and with 
@@ -1158,10 +1212,16 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
     ##                    inside dir and use that folder. (if alreaddy exists, will just use)
     #S     sub:  a synonym for subDir. (since use of ... does not allow for partial matches) 
     ##
-    ## returns:  the path/to/file.Rda where obj was saved
+    ## returns:  the path/to/file.Rda where objects were saved
 
     # get objects from dots
     objNames <- as.list(as.character(substitute(list(...)))[-1L])
+
+    # TODO:  double-check pos value.  It might be off. 
+    # check any value is eval(XX), if so parse it. Collect all values into a single vector.   
+    objNames <- unlist( lapply(objNames, function(ob) 
+      if(substr(ob, 1, 5)=="eval(")   eval(parse(text=substr(ob, 6, nchar(ob)-1)), envir=parent.frame(pos+1))  else  ob
+    ) )
 
     #----- ERROR CHECKS ------#
     # If any of the assignment operators are found in the list, throw an error
@@ -1171,29 +1231,74 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
 
 
     # if flag is true, add appropriate subdir
-    if (subDir) {
+    if (subDir) 
       dir <- as.path(dir, "data_bak")
-    }
+
+    # add timeStamp to dir if required
+    if(stampDir)
+      dir <- paste0(as.path(dir), "_", timeStamp())
 
     # Create dir if needed
     dir.create(as.path(dir), recursive=TRUE, showWarnings=FALSE)
 
-    # create the filename, cleaning objNames of bad chars
-    fileName <- paste0(cleanChars(objNames),"_",ts(),".Rda")
-    fileWithPath <- as.path(dir,fileName)  # convert to list for use with do.call later
-      
+    # create the file paths, cleaning objNames of bad chars
+    fileWithPath <- sapply(objNames, mkSaveFileNameWithPath, dir=dir, addTimeStamp=stampFile)
+
     # Save the object
     mapply(function(obj, thefile)
               # note that with the save+do.call we are going in an extra two environments, hence pos + 2  (also, tested with pos+1, pos+3, both wrong)
               do.call(save, args=list(obj, envir=parent.frame(pos+2), file=thefile) )  # pos + 3 will be off if 
           , objNames, fileWithPath)
 
+            ## This does NOT work. 
+            # filesCreated <- do.call(saveit, args=list(objNames, pos=pos+1, dir=dir, addTimeStamp=stampFile))
+            # return(filesCreated )
     
-    # return the path/to/files
+    # return the path/to/files or just a summary
+    if (summary)
+      return(list(smry=paste(length(fileWithPath), "files were created in:"), dir=dir))
     return(fileWithPath)
   }
 
 
+
+#__________________________________________________________________________#
+
+    #--------------------------------------------#
+
+mkSaveFileNameWithPath <- function(objName, dir, pos=2, addTimeStamp=FALSE, ext=".Rda") {
+    # error check
+    if (!is.character(objName))
+      stop("objName should be character. Did you forget quotation marks?")
+
+    # Create Suffix (based on dim, if applicable, and append timeStamp if required)
+    suffix <- dimToString(objName, pos=pos+1)
+    if(addTimeStamp)
+      suffix <- paste0(suffix, "-", timeStamp())
+
+    # create the filename, cleaning objName of bad chars
+    # return the file path
+    as.path(dir, paste0(cleanChars(objName),suffix,ext))
+ }
+    
+    #--------------------------------------------#
+
+dimToString <- function(objName, pos=2, prefix="-") {
+# gets the dimensions of an object and converts it to a string; if dim is NULL returns ""
+    
+    # error check
+    if (!is.character(objName))
+      stop("objName should be character. Did you forget quotation marks?")
+
+    obj.dim <- dim(get(objName, envir=parent.frame(pos)) )
+
+    suffix <- ""
+    if (!is.null(obj.dim))
+      suffix <- paste0(prefix, "!",paste(obj.dim, collapse="x"),"!")
+
+    return(suffix)
+}
+    #--------------------------------------------#
 #__________________________________________________________________________#
 #==========================================================================#
 
@@ -1572,9 +1677,9 @@ source.url <- function(...) {
 ### ----------------------------------------------------------------------------
 ###
 ###  TO EXECUTE: 
-###    Group the left hand side using the new function `g()`
+###    Group the left hand side using the new function 'g()'
 ###    The right hand side should be a vector or a list
-###    Use the newly-created binary operator `%=%`
+###    Use the newly-created binary operator '%=%'
 ###
 ###         eg:  g(a, b, c)  %=%  list("hello", 123, list("apples, oranges"))
 ####
@@ -1766,13 +1871,71 @@ coefTable <- function(model) {
 
 #_________________________________________#
 
+# DATA TABLE UTILS
+tbls <- function()  
+  # shorter tables() summary with column count
+  tables(env=.GlobalEnv, silent=TRUE)[,list(NAME, MB, NROW, NCOL=1+str_count(COLS, ","), KEY)]  
+
+colquote <- function(colNamesAsStrings) {
+  # Converts a vector of strings to a quoted (expression) list. 
+  #  eg:  converts:   c("colName1", "colName2")
+  #       to:         quote(list(colName1, colName2))
+     
+    as.call(lapply(c("list", colNamesAsStrings), as.symbol))
+  }
+
+#_________________________________________#
 
 
+splitEvery <- function(string, n, remSpace = FALSE)  {
 
-## FUNCTION TO MAKE A PAGE BREAK FOR NEXT PROBLEM NUMBER
-nextProb <- function(probNumb, pgBreak=TRUE) {
-    par(new=F)
-    plot(0:10, type = "n", xaxt="n", yaxt="n", bty="n", xlab = "", ylab = "")
-    text(5.5, 6.5, labels=paste0("Problem #", probNumb), cex=2.5, adj=0.5)
-    par(new=!pgBreak)
+  # if n is too small, return error
+  if (n < 1)
+    stop("n must be at least 1")
+
+  # if vector, iterate over each
+  if (length(string) > 1) {
+    if(!is.ts(string))
+      return(sapply(string, function(s) splitEvery(s, n)))
+    return(sapply(seq(string), function(i) splitEvery(string[[i]], n)))
+  }
+
+  if(!is.character(string))
+    string <- as.character(string)
+
+  # remove space if selected
+  if (remSpace)
+    string <- gsub(" ", "", string)
+
+  # for smaller n, do more quickly
+  if (n == 1)
+    return(strsplit(string, "")[[1]])
+
+  if (n >= nchar(string))
+    return(string)
+
+  # error prevention: buffer will be added to end of string to avoid recycling of first letters  
+  buffer <- rep("",  (0 - nchar(string)) %% n)
+
+  if (n == 2)  {
+    sst <- c(strsplit(string, "")[[1]], buffer)
+    return(paste0(sst[c(TRUE, FALSE)], sst[c(FALSE, TRUE)]))
+  }
+
+  # else
+
+  # create index vectors of T/F.  eg for n=4
+    # T, F, F, F
+    # F, T, F, F
+    # F, F, T, F
+    # F, F, F, T
+  TrueFalseVec  <- rep(c(T, F), c(1, n-1))
+  indexs <- lapply(rev(seq(n)), function(i)  TrueFalseVec[((1:n + i-1) %% n) + 1])
+
+  # split the string by letter, adding buffer at end (to avoid recylcling of letters)
+  sst <- c(strsplit(string, "")[[1]], buffer)
+
+  # outer apply loop simply pastes the letters back together
+  #  inner mapply loop selects the letters per group, using the F/T/F/F, etc/
+  apply(mapply("[", list(sst), indexs), 1, paste0, collapse="")
 }
