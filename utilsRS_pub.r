@@ -1,4 +1,5 @@
 
+`%ni%` <- Negate(`%in%`)
 
 #------------------------------------------------------
 #   THESE ARE THE FUNCTIONS PRESENT IN THIS FILE      
@@ -498,9 +499,14 @@ nestedIndx <- function(this, pre=NULL, thisdepth=0) {
 #--------------------------------------------
 
 
+# like paste0, but with collapse="" 
+pasteC <- function(...)
+  paste(..., collapse="")
+paste_ <- function(...)
+  paste(..., collapse="_")
 
 
-fw0 <- function(num, digs=NULL, mkseq=TRUE)  {
+fw0 <- function(num, digs=NULL, mkseq=TRUE, pspace=FALSE)  {
   ## formats digits with leading 0's. 
   ## num should be an integer or range of integers.
   ## if mkseq=T, then an num of length 1 will be expanded to seq(1, num).   
@@ -530,8 +536,10 @@ if (!is.vector(num) & !is.matrix(num)) {
   # number of digits is that of largest number or digs, whichever is max
   digs <- max(nchar(max(abs(num))), digs)  
 
-  # if there are a mix of neg & pos numbers, add a space for pos numbs
-  posSpace <- ifelse(sign(max(num)) != sign(min(num)), " ", "")
+  # if there are a mix of neg & pos numbers, add a space for pos numbers 
+  #   (checking first for 0)
+  #   OR if pspace is flagged as TRUE
+  posSpace <- ifelse((min(num) != 0 &  sign(max(num)) != sign(min(num)) | pspace==TRUE), " ", "")
 
   # return: paste appropriate 0's and preface neg/pos mark
   ret <- 
@@ -969,6 +977,21 @@ tbs <- function(n, nl=FALSE)  {
   return(paste0(ifelse(nl, "\n", ""), paste0(rep("\t", n), collapse="")))  
 }
 
+pip <- function() {
+# for broken keyboard, missing pipe
+cat("
+|
+
+")
+}
+
+slash <- function() {
+# for broken keyboard, missing pipe
+cat("
+\\ 
+")
+}
+
 miniframe <- function(data, rows=200)  {
   ## returns a dataframe similar to data but with a randomly selected rows 
   miniLength <- 200
@@ -978,7 +1001,6 @@ miniframe <- function(data, rows=200)  {
   cat(ind)
   return(data[ind,])
 }
-
 
 
 makeDictWithIntegerKeys <- function(KVraw, applyLabels=TRUE)  { 
@@ -1136,6 +1158,9 @@ detectAssignment <- function(obj, single=TRUE, simplify=FALSE) {
 #              depends: detectAssignment, timeStamp, as.path               #
 #__________________________________________________________________________#
 
+    loadbak <- function(f, env=parent.frame())
+    # wrapper function for loading from outDir/data_bak/<fileName>
+      load(as.path(outDir, "data_bak", as.character(match.call()[[2]])), envir=env)
 
   saveit <- function(obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1, addTimeStamp=TRUE)  {
     ##  Like savethem() but only takes a single obj argument
@@ -1521,8 +1546,17 @@ lP <- listPacker <- function(receiver, ...)  {
 
   
 
+
+lsnf <- function(...){
+# same as ls(), but such that object is not a function
+  objs <- ls(..., envir=parent.frame(2))
+  objs[!sapply(objs, function(x) is.function(get(x, parent.frame(2))))]
+}
+
+
 #/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\#
 ##               DIRECTORY FUNCTIONS               ##
+
 
 initialDir  <- getwd()
 previousdir <- getwd()  # generally: "~/"
@@ -1871,18 +1905,12 @@ coefTable <- function(model) {
 
 #_________________________________________#
 
-# DATA TABLE UTILS
-tbls <- function()  
-  # shorter tables() summary with column count
-  tables(env=.GlobalEnv, silent=TRUE)[,list(NAME, MB, NROW, NCOL=1+str_count(COLS, ","), KEY)]  
-
-colquote <- function(colNamesAsStrings) {
-  # Converts a vector of strings to a quoted (expression) list. 
-  #  eg:  converts:   c("colName1", "colName2")
-  #       to:         quote(list(colName1, colName2))
-     
-    as.call(lapply(c("list", colNamesAsStrings), as.symbol))
-  }
+getHumanDateFromEpochDAY <- function(epochDAY, epoch="1970-01-01 00:00:00", epochtz="UTC", asChar=TRUE) { 
+  # Converts an epoch *DAY* (eg, an integer like 15323) to a HumanDate (eg "2011-12-15")
+  if (asChar) 
+    return( as.character(as.POSIXct((as.numeric(epochDAY) * 86400), origin=epoch, tz=epochtz)) )
+  return( as.POSIXct((as.numeric(epochDAY) * 86400), origin=epoch, tz=epochtz) )
+}
 
 #_________________________________________#
 
@@ -1939,3 +1967,199 @@ splitEvery <- function(string, n, remSpace = FALSE)  {
   #  inner mapply loop selects the letters per group, using the F/T/F/F, etc/
   apply(mapply("[", list(sst), indexs), 1, paste0, collapse="")
 }
+
+
+#-----------------------------------
+
+
+
+# for broken keyboard with no \ key
+sls <- slsh <- "\\"
+pip <- "|"
+
+cls <- function() 
+  cat(rep("\n",100))
+
+#===================================================================#
+  pkgFind <- function(toFind) { 
+    # useful when you cant remember the capitalization, etc of a package
+    #   ie, is it rCurl, RCurl, rcurl ... ? 
+    pkgs <- dir(.libPaths())
+    pkgs[stringr::str_detect(pkgs, stringr::ignore.case(toFind))]
+  }
+#===================================================================#
+
+#-----------------------------------
+#   WORKSPACE FUNCTIONS
+#-----------------------------------
+
+  # save and load default
+  savdef <- savedef <- function(env=parent.frame())
+    eval(save.image(file="~/.default.RData"), envir=env)
+
+  loadef <- function()
+    load(file="~/.default.RData", envir=.GlobalEnv)
+
+  
+  # source function `fresh()`
+  fresh <- function(save=TRUE, utils=TRUE, dt=TRUE, env=parent.frame(), all=NULL) {
+
+    if(!is.null(all))
+      save <- utils <- dt <- all
+
+    if(save)
+      savedef()
+
+    ## CLEAN UP
+    #---------------------------------------#
+      # remove all packages
+      .pkgs <- names(sessionInfo()$otherPkgs)
+      sapply(.pkgs, function(pkg) eval(parse(text=paste0("detach(package:", pkg, ")"))))
+
+      # remove all (most) namespaces. 
+          # dependencies are listed as a comma delimd string. 
+          #  split on the commas and count the number. 
+          #  value of 1, usually indicates a dependency on ver #
+          # Start with the highest number and work down
+      attempts <- 10
+      for (i in 1:attempts) { 
+          # get all the namespaces
+          .ns <- sessionInfo()$loadedOnly  # note, using loadedNamespaces() give insufficent information
+
+          # count the number of dependancys 
+          .counts <- sapply(.ns, function(x) ifelse(is.null(x$Depends), 0, length(strsplit(x$Depends, ",")[[1]])))
+            
+          # attempt to remove them, starting with the one with the highest count
+          .dummy <- sapply(names(.ns[order(.counts)]), function(ns) try(unloadNamespace(ns), TRUE))
+      }
+
+      # remove all objects
+      eval(expression(rm(list=ls(all=TRUE))), envir=env)
+    #---------------------------------------#
+
+    setwd(path.expand("~"))
+    
+    if(utils)
+      source(path.expand("~/git/misc/rscripts/utilsRS.r"))
+
+    if(dt)
+      library(data.table)
+
+    # fake `cls()`
+    cat(rep("\n",100))
+    return("So Fresh and So Clean")
+  }
+
+
+
+#_________________________________________#
+            #---------------# 
+            # DATA TABLE UTILS
+
+
+tbls <- function(envir=.GlobalEnv)  
+  # shorter tables() summary with column count
+  tables(env=envir, silent=TRUE)[,list(NAME, MB, NROW, NCOL=1+stringr::str_count(COLS, ","), KEY)]  
+
+
+colquote <- function(colNamesAsStrings) {
+  # Converts a vector of strings to a quoted (expression) list. 
+  #  eg:  converts:   c("colName1", "colName2")
+  #       to:         quote(list(colName1, colName2))
+     
+    as.call(lapply(c("list", colNamesAsStrings), as.symbol))
+  }
+
+            #---------------# 
+
+  uniqueRows <- function(DT) { 
+    # IF DT IS KEYED, FUNCTION ACTS SIMILAR TO unique.data.frame(.)
+
+    # If not keyed (or not a DT), use regular unique(DT)
+    if (!haskey(DT) ||  !is.data.table(x) )
+      return(unique(DT))
+
+    .key <- key(DT) 
+    setkey(DT, NULL)
+    setkeyE(unique(DT), eval(.key))
+  }   
+
+
+  getdotsWithEval <- function () {
+      dots <- 
+        as.character(match.call(sys.function(-1), call = sys.call(-1), 
+            expand.dots = FALSE)$...)
+
+      if (grepl("^eval\\(", dots) && grepl("\\)$", dots))
+        return(eval(parse(text=dots)))
+      return(dots)
+  }
+
+  setkeyE <- function (x, ..., verbose = getOption("datatable.verbose")) {
+    # SAME AS setkey(.) WITH ADDITION THAT 
+    # IF KEY IS WRAPPED IN eval(.) IT WILL BE PARSED
+      if (is.character(x)) 
+          stop("x may no longer be the character name of the data.table. The possibility was undocumented and has been removed.")
+      #** THIS IS THE MODIFIED LINE **#
+      # OLD**:  cols = getdots()
+      cols <- getdotsWithEval()
+      if (!length(cols)) 
+          cols = colnames(x)
+      else if (identical(cols, "NULL")) 
+          cols = NULL
+      setkeyv(x, cols, verbose = verbose)
+  }
+
+#_________________________________________#
+
+
+
+
+#-------------------------------------#
+##  FUNCTIONS
+#-------------------------------------#
+  shift <- function(x)
+    c(x[-1], x[1])
+
+  shiftb <- function(x)
+    c(x[length(x)], x[-length(x)])
+
+  namesdetect <- function(x, pattern)
+    names(x)[grepl(pattern, names(x))]
+
+  namesIn <- function(x, vec, positive=TRUE)
+    names(x)[xor(!positive,  names(x) %in% vec)]
+
+  namesNotIn <- function(x, vec)
+    namesIn(x, vec, positive=FALSE)
+
+    
+  orderedColumns <- function(DT, frontCols=NULL, ignoreCase=TRUE, endCols=NULL) {
+
+    # function to ignore case
+    ifToUpp <- if (ignoreCase) toupper else function(x) x
+
+    # returns metric columns in an ordered fashion
+    nm <- names(DT)
+
+    # set of columns to frontCols, if not supplied
+    if (!length(frontCols)) 
+      frontCols <-  c("artistID", "concertID", "Date", "Day", "artistName", "state", "venue", "perc", "isTraining", "name", "day", "month", "year", "MinDate")
+    
+    # which columns are `ends`
+    ends <- ifToUpp(nm) %in% ifToUpp(endCols) 
+
+    # which columns are 'non-metrics' and not `endCols`    
+    non <- ifToUpp(nm) %in% ifToUpp(frontCols) 
+
+    # reorder: first the `non-metrics` in the order they appeared
+    #          then the `metrics` ordered alphabetically
+    c(nm[non & !ends], nm[!non][order(nm[!non])], nm[ends])
+  }
+
+
+  combineRows <- function(x)
+    if (all(is.na(x))) as.numeric(NA) else 
+        if(anyDuplicated(x)) max(x, na.rm=TRUE) else sum(x, na.rm=TRUE)
+      
+#-------------------------------------#

@@ -2,18 +2,18 @@
 fw0 <- function(num, digs=NULL, mkseq=TRUE, pspace=FALSE)  {
   ## formats digits with leading 0's. 
   ## num should be an integer or range of integers.
-  ## if mkseq=T, then an num of length 1 will be expanded to seq(1, num).   
-  #
-  # Note that if num is a list, digs will not be automatically compared across the list, and therefore should be manually slected. 
+  ## if mkseq==T, then any `num` of length 1 will be expanded to seq(1, num).   
+  ##
+  ##  Note that if `num` is a list, `digs` will *not* be automatically compared
+  ##      across the list, and therefore should be manually slected. 
 
-  # TODO 1:  put more error check
 
   # when num is a list, call recursively.  mkseq should not expand the list into seq, unless specifically user sets flag or entire list is just length one element
   if (is.list(num))
     return(lapply(num, fw0, digs=digs, mkseq=ifelse(missing(mkseq), !length(num) > 1, mkseq)))
 
-if (!is.vector(num) & !is.matrix(num)) {
-    stop("num should be integer or vector")
+  if (!is.vector(num) & !is.matrix(num)) {
+      stop("num should be integer or vector")
   }
 
   # capture the dims and we will put it back
@@ -41,7 +41,7 @@ if (!is.vector(num) & !is.matrix(num)) {
     paste0(posSpace, paste0(rep(0, max(0, digs-nchar(abs(x)))), collapse=""), x)
     ))
 
-  # put back in original form.  ie, make it a matrix if it was originally. Otherwise, this will just be NULL
+  # if it was originally matrix or array, reset dim, otherwise, this will just be NULL
   dim(ret) <- dims
 
   return(ret)
