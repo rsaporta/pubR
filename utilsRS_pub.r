@@ -1,90 +1,113 @@
 
-`%ni%` <- Negate(`%in%`)
-
 #------------------------------------------------------
 #   THESE ARE THE FUNCTIONS PRESENT IN THIS FILE      
 #------------------------------------------------------
 #------------------------------------------------------
-    #   JavaTest ( stopRun=TRUE, runInit=TRUE ) 
-    #   isErr ( expression ) 
-    #   isNumber ( x ) 
-    #   showProg ( flag, outp, header=FALSE, done=FALSE, tb=1 ) 
-    #   depth ( x, counter=0 ) 
-    #   listStr ( obj, showValues=TRUE ) 
-    #   longestLength ( obj, currentMax=0 ) 
-    #   listFlatten ( obj, filler=NA ) 
-    #   tableFlatten ( tableWithLists, filler="" ) 
-    #   insertListAsCols ( input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE ) 
-    #   insertListAsCols.list ( input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE ) 
-    #   findGroupRanges ( booleanVec ) 
-    #   nestedIndx ( this, pre=NULL, thisdepth=0 ) 
-    #   fw0 ( num, digs=NULL, mkseq=TRUE ) 
-    #   fw0.older ( obj, digs=NULL ) 
-    #   fw ( x, dec=4, digs=4, w=NULL, ... ) 
-    #   fw3 ( x, dec=3, digs=3, w=NULL, ... ) 
-    #   fwp ( x, dec=2, sep=" " ) 
-    #   clipPaste ( flat=TRUE ) 
-    #   meantrm ( x, p=6 ) 
-    #   CMT <- getCMT <- getClassModeTypeof ( obj ) 
-    #   jythonIsGlobal (  ) 
-    #   python ( jythonStatement ) 
-    #   pythonGet ( pythonObj ) 
-    #   pythonSet ( rObj ) 
-    #   pythonSetDiffName ( pythonObj, rObj ) 
-    #   pyParse ( strToParse ) 
-    #   form ( x, dig=3 ) 
-    #   getNCMT <- getNameClassModeTypeof ( obj ) 
-    #   countNA01s ( vec ) 
-    #   insert ( lis, obj, pos=0, objIsMany=FALSE ) 
-    #   as.path ( ..., fsep=.Platform$file.sep, expand=TRUE ) 
-    #   dosDir ( wrkDir, gitData=FALSE, mkdir=FALSE ) 
-    #   makeDictFromCSV ( csvFile ) 
-    #   isSubstrAtEnd ( x, pattern, ignorecase=TRUE ) 
-    #   s <- smry ( x, rows=6, cols=6, cmt=TRUE ) 
-    #   c4 ( x, rows=20, cols=4, cmt=TRUE ) 
-    #   topropper ( x ) 
-    #   qy <- quity ( dir='~/' ) 
-    #   qn <- quitn ( dir='~/' ) 
-    #   tbs ( n, nl=FALSE ) 
-    #   miniframe ( data, rows=200 ) 
-    #   makeDictWithIntegerKeys ( KVraw, applyLabels=TRUE ) 
-    #   chkp <-chkpt ( logStr, chkpOn=TRUE, final=FALSE ) 
-    #   pgDisconnectAll ( drv=dbDriver("PostgreSQL") ) 
-    #   mgsub ( pattern, replacement, x, ..., fixed=TRUE ) 
-    #   cleanChars ( text, replacement="_", Whitelist=NULL ) 
-    #   replaceBadCharsUnderscore ( str, WhiteList=NULL ) 
-    #   timeStamp ( seconds=FALSE ) 
-    #   detectAssignment ( obj, single=TRUE, simplify=FALSE ) 
-    #   saveit ( obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1, addTimeStamp=TRUE ) 
-    #   savethem <- jesus ( ..., dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=sub,                                  pos=1, sub=TRUE, stampDir=TRUE, stampFile=FALSE, summary=TRUE ) 
-    #   mkSaveFileNameWithPath ( objName, dir, pos=2, addTimeStamp=FALSE, ext=".Rda" ) 
-    #   dimToString ( objName, pos=2, prefix="-" ) 
-    #   plength <- printlength ( opt=200 ) 
-    #   reminder (  ) 
-    #   retTst ( n ) 
-    #   allPosCombsList ( dat, choose=seq(ncol(dat)), yName="y" ) 
-    #   allPosCombsMatrix.TakesTooLong ( dat, choose=-1 ) 
-    #   formulasList ( dat, yName="y", VARS.list=NULL, interact=TRUE, intercept=TRUE ) 
-    #   logscale ( range=2:5, intervals=2, base=10 ) 
-    #   asCurr ( x, decim=2, noSpacesAfterSymb=1, symbol="$" ) 
-    #   lP <- listPacker ( receiver, ... ) 
-    #   previouswd (  ) 
-    #   homewd (  ) 
-    #   devwd (  ) 
-    #   gitwd (  ) 
-    #   msdwd (  ) 
-    #   devsource ( file, dir="~/Dropbox/dev/R/!ScriptsR/" ) 
-    #   gitsource ( file, dir="~/git/misc/rscripts/" ) 
-    #   homesource ( file, dir="~/" ) 
-    #   txr (  ) 
-    #   source.url ( ... ) 
-    #   extendToMatch ( source, destin ) 
-    #   rmDupLines ( obj, trim=T ) 
-    #   cordl ( ..., length=NULL, justSize=FALSE, crop=TRUE, chop=TRUE ) 
-    #   paraLineChop ( so, length=NULL, lines=NULL, justSize=FALSE ) 
-    #   coefTable ( model ) 
-    #   tbls (  ) 
-    #   colquote ( colNamesAsStrings ) 
+   #  JavaTest ( stopRun=TRUE, runInit=TRUE ) 
+   #  isErr ( expression ) 
+   #  isNumber ( x ) 
+   #  showProg ( flag, outp, header=FALSE, done=FALSE, tb=1 ) 
+   #  depth ( x, counter=0 ) 
+   #  listStr ( obj, showValues=TRUE ) 
+   #  longestLength ( obj, currentMax=0 ) 
+   #  listFlatten ( obj, filler=NA ) 
+   #  tableFlatten ( tableWithLists, filler="" ) 
+   #  insertListAsCols ( input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE ) 
+   #  insertListAsCols.list ( input, target, targetCols, replaceOriginalTargetCol=FALSE, preserveNames=TRUE ) 
+   #  findGroupRanges ( booleanVec ) 
+   #  nestedIndx ( this, pre=NULL, thisdepth=0 ) 
+   #  pasteC ( ... ) 
+   #  fw0 ( num, digs=NULL, mkseq=TRUE, pspace=FALSE ) 
+   #  fw0.older ( obj, digs=NULL ) 
+   #  fw ( x, dec=4, digs=4, w=NULL, ... ) 
+   #  fw3 ( x, dec=3, digs=3, w=NULL, ... ) 
+   #  fwp ( x, dec=2, sep=" " ) 
+   #  clipPaste ( flat=TRUE ) 
+   #  meantrm ( x, p=6 ) 
+   #  CMT <- getCMT <- getClassModeTypeof ( obj ) 
+   #  jythonIsGlobal (  ) 
+   #  python ( jythonStatement ) 
+   #  pythonGet ( pythonObj ) 
+   #  pythonSet ( rObj ) 
+   #  pythonSetDiffName ( pythonObj, rObj ) 
+   #  pyParse ( strToParse ) 
+   #  form ( x, dig=3 ) 
+   #  getNCMT <- getNameClassModeTypeof ( obj ) 
+   #  countNA01s ( vec ) 
+   #  insert ( lis, obj, pos=0, objIsMany=FALSE ) 
+   #  as.path ( ..., fsep=.Platform$file.sep, expand=TRUE ) 
+   #  dosDir ( wrkDir, gitData=FALSE, mkdir=FALSE ) 
+   #  makeDictFromCSV ( csvFile ) 
+   #  isSubstrAtEnd ( x, pattern, ignorecase=TRUE ) 
+   #  s <- smry ( x, rows=6, cols=6, cmt=TRUE ) 
+   #  c4 ( x, rows=20, cols=4, cmt=TRUE ) 
+   #  topropper ( x ) 
+   #  qy <- quity ( dir='~/' ) 
+   #  qn <- quitn ( dir='~/' ) 
+   #  tbs ( n, nl=FALSE ) 
+   #  pip (  ) 
+   #  slash (  ) 
+   #  miniframe ( data, rows=200 ) 
+   #  makeDictWithIntegerKeys ( KVraw, applyLabels=TRUE ) 
+   #  chkp <-chkpt ( logStr, chkpOn=TRUE, final=FALSE ) 
+   #  pgDisconnectAll ( drv=dbDriver("PostgreSQL") ) 
+   #  mgsub ( pattern, replacement, x, ..., fixed=TRUE ) 
+   #  cleanChars ( text, replacement="_", Whitelist=NULL ) 
+   #  replaceBadCharsUnderscore ( str, WhiteList=NULL ) 
+   #  timeStamp ( seconds=FALSE ) 
+   #  detectAssignment ( obj, single=TRUE, simplify=FALSE ) 
+   #  loadbak ( f, env=parent.frame() ) 
+   #  saveit ( obj, dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=TRUE, pos=1, addTimeStamp=TRUE ) 
+   #  savethem <- jesus ( ..., dir=ifelse(exists("outDir"), outDir, as.path(getwd(), "out")), subDir=sub, pos=1, sub=TRUE, stampDir=TRUE, stampFile=FALSE, summary=TRUE ) 
+   #  mkSaveFileNameWithPath ( objName, dir, pos=2, addTimeStamp=FALSE, ext=".Rda" ) 
+   #  dimToString ( objName, pos=2, prefix="-" ) 
+   #  plength <- printlength ( opt=200 ) 
+   #  reminder (  ) 
+   #  retTst ( n ) 
+   #  allPosCombsList ( dat, choose=seq(ncol(dat)), yName="y" ) 
+   #  formulasList ( dat, yName="y", VARS.list=NULL, interact=TRUE, intercept=TRUE ) 
+   #  logscale ( range=2:5, intervals=2, base=10 ) 
+   #  asCurr ( x, decim=2, noSpacesAfterSymb=1, symbol="$" ) 
+   #  lP <- listPacker ( receiver, ... ) 
+   #  lsnf ( ... ) 
+   #  previouswd (  ) 
+   #  homewd (  ) 
+   #  devwd (  ) 
+   #  gitwd (  ) 
+   #  msdwd (  ) 
+   #  devsource ( file, dir="~/Dropbox/dev/R/!ScriptsR/" ) 
+   #  gitsource ( file, dir="~/git/misc/rscripts/" ) 
+   #  homesource ( file, dir="~/" ) 
+   #  txr (  ) 
+   #  source.url ( ... ) 
+   #  extendToMatch ( source, destin ) 
+   #  rmDupLines ( obj, trim=T ) 
+   #  cordl ( ..., length=NULL, justSize=FALSE, crop=TRUE, chop=TRUE ) 
+   #  paraLineChop ( so, length=NULL, lines=NULL, justSize=FALSE ) 
+   #  coefTable ( model ) 
+   #  getHumanDateFromEpochDAY ( epochDAY, epoch="1970-01-01 00:00:00", epochtz="UTC", asChar=TRUE ) 
+   #  splitEvery ( string, n, remSpace = FALSE ) 
+   #  cls (  ) 
+   #  pkgFind ( toFind ) 
+   #  regexAll ( pattern, stringVec, replace="@@@", ignore.case=FALSE, fixed=FALSE, perl=FALSE, value=FALSE ) 
+   #  savdef <- savedef ( env=parent.frame() ) 
+   #  loadef (  ) 
+   #  savenbs (  ) 
+   #  loadnbs (  ) 
+   #  fresh ( save=TRUE, utils=TRUE, dt=TRUE, env=parent.frame(), all=NULL ) 
+   #  tbls ( envir=.GlobalEnv ) 
+   #  colquote ( colNamesAsStrings ) 
+   #  uniqueRows ( DT ) 
+   #  getdotsWithEval (  ) 
+   #  setkeyE ( x, ..., verbose = getOption("datatable.verbose") ) 
+   #  shift ( x ) 
+   #  shiftb ( x ) 
+   #  namesdetect ( x, pattern ) 
+   #  namesIn ( x, vec, positive=TRUE ) 
+   #  namesNotIn ( x, vec ) 
+   #  orderedColumns ( DT, frontCols=NULL, ignoreCase=TRUE, endCols=NULL ) 
+   #  combineRows ( x ) 
+   #  wordCount ( obj, words, ignore.case=TRUE, preservePunct=FALSE ) 
 #------------------------------------------------------
 #------------------------------------------------------
 
@@ -843,7 +866,7 @@ dosDir <- function(wrkDir, gitData=FALSE, mkdir=FALSE) {
 
   # create vars (+'Dir') and vals (paths)
   vars <- paste0(grp, "Dir")
-  vals <- mapply(as.path, wrkDir, grp, MoreArgs=list(expand=F), USE.NAMES=F)
+  vals <- mapply(as.path, wrkDir, grp, MoreArgs=list(expand=FALSE), USE.NAMES=FALSE)
 
   # if flagged, data dir will be in different directory
   if (gitData)
@@ -1368,10 +1391,10 @@ saveToFile_TabDelim <- function(obj, directory=getwd())  {
   # create the filename, then save it
   fileName <- paste0(directory,"/",objName,"_",ts(),".csv")
   write.table(obj, file=fileName, sep="\t", eol="\n",
-              col.names=TRUE, row.names=TRUE, append=TRUE, quote=F, qmethod="double")
+              col.names=TRUE, row.names=TRUE, append=TRUE, quote=FALSE, qmethod="double")
 
 #  write.table(rbind(obj), file=fileName, sep="\t", eol="\n",
-       #       col.names=TRUE, row.names=TRUE, append=T, quote=F, qmethod="double")
+       #       col.names=TRUE, row.names=TRUE, append=T, quote=FALSE, qmethod="double")
   return(fileName)
 }
 
@@ -1532,7 +1555,9 @@ lP <- listPacker <- function(receiver, ...)  {
 
   return(c(receiver, list(...)))
 
-  # TODO:  Decide if any of this is still useful, else chuck it. 
+  #-----------------------------------------------------------------------#
+  # TODO:  Decide if any of the following is still useful, else chuck it. #
+  #-----------------------------------------------------------------------#
         # if (length(list(...)) > 0L) {
         #   receiver[length(receiver) + 1L] <- ..1
         #   if (length(list(...)) > 1L)  {
@@ -1542,6 +1567,7 @@ lP <- listPacker <- function(receiver, ...)  {
         #   warning("There were nothing to add to the list.")
         # }
         # receiver
+  #-----------------------------------------------------------------------#
 }
 
   
@@ -1743,7 +1769,7 @@ rmDupLines <- function(obj, trim=T)  {
       return(obj[!sapply(seq(obj)[-1L], function(i) obj[i,]==obj[i-1,])])
 
   if (trim) {
-    filler <- sapply(obj, identical, "", USE.NAMES=F)
+    filler <- sapply(obj, identical, "", USE.NAMES=FALSE)
     obj <- obj[min(which(!filler)):max(which(!filler))]
   }
   
@@ -1987,6 +2013,22 @@ cls <- function()
     pkgs <- dir(.libPaths())
     pkgs[stringr::str_detect(pkgs, stringr::ignore.case(toFind))]
   }
+
+
+  regexAll <- function(pattern, stringVec, replace="@@@", ignore.case=FALSE, fixed=FALSE, perl=FALSE, value=FALSE) {
+  # quick comparisons of the different family of regex options
+  list("OriginalString"=x
+            ,   "grep"     = grep    (pattern, stringVec, ignore.case=ignore.case, fixed=fixed, perl=perl, value=value)
+            ,   "grepl"    = grepl   (pattern, stringVec, ignore.case=ignore.case, fixed=fixed, perl=perl) 
+            ,   "regexpr"  = regexpr (pattern, stringVec, ignore.case=ignore.case, fixed=fixed, perl=perl) 
+            ,   "gregexpr" = gregexpr(pattern, stringVec, ignore.case=ignore.case, fixed=fixed, perl=perl)  
+            ,   "regexec"  = regexec (pattern, stringVec, ignore.case=ignore.case, fixed=fixed)  
+            ,   "gsub"     = gsub(pattern, replace, stringVec, ignore.case=ignore.case, fixed=fixed, perl=perl)
+            ,   "sub"      = sub (pattern, replace, stringVec, ignore.case=ignore.case, fixed=fixed, perl=perl)
+            )
+  }
+
+
 #===================================================================#
 
 #-----------------------------------
@@ -1999,6 +2041,16 @@ cls <- function()
 
   loadef <- function()
     load(file="~/.default.RData", envir=.GlobalEnv)
+
+  # save and load images specifc to NBS
+  savenbs <- function()
+    eval(save.image(file="~/gitData/nbs/.NBS_image.RData"), envir=.GlobalEnv)
+
+  loadnbs <- function()  {
+    load(file="~/gitData/nbs/.NBS_image.RData", envir=.GlobalEnv)
+    setwd("~/git/nbs")
+  }
+
 
   
   # source function `fresh()`
@@ -2163,3 +2215,56 @@ colquote <- function(colNamesAsStrings) {
         if(anyDuplicated(x)) max(x, na.rm=TRUE) else sum(x, na.rm=TRUE)
       
 #-------------------------------------#
+
+
+
+wordCount <- function(obj, words, ignore.case=TRUE, preservePunct=FALSE) {
+# basic word count, whole words only
+# obj is the source to search for and count words
+# words can be a single word, a vector or list of words, or it can be blank (for just a "total word" count)
+# words, if it is only one word, does not to be quoted. 
+# preservePunct, if TRUE, punctuation will be considered part of a word. 
+
+  # split on whitespace and punctuation, unless flagged not to use punct. 
+  splitOn <- "[[:space:]]"
+  obj.split <- strsplit(obj, splitOn)
+
+  if (!preservePunct)
+    obj.split <- lapply(obj.split, gsub, pattern="[[:punct:]]", replacement="")
+
+  # extra spaces etc, will have nchar of 0. Count only those > 0.
+  .totalWords <- sapply(obj.split, function(x) sum(nchar(x) > 0))
+
+  #initialize
+  results <- NULL
+
+  # count occurance of specific word
+  #--------------------------------#
+  if(!missing(words)) {
+    # check if words exists and is character
+    .tried <- try(sapply(words, is.character), silent=TRUE)
+    if (inherits(.tried, "try-error") || !all(sapply(words, is.character)))
+      words <- as.character(match.call()[[3]])
+
+    # in case words is a list instead of a vector
+    words <- unlist(words)
+
+    # for each words, count the number of occurences in each x
+    .wordCount <- sapply(words, function(word)
+                    sapply(obj.split, function(x) sum(grepl(word, x, ignore.case=ignore.case)) ) )
+
+     results <- data.frame(.wordCount)
+
+  } else words <- NULL
+  #--------------------------------#
+
+  results <- data.frame(cbind(results, .totalWords))
+  colnames(results) <- c(words, "TotalWords")
+  rownames(results) <- names(obj)
+
+  return(results)
+}
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+  `%ni%` <- Negate(`%in%`) 
