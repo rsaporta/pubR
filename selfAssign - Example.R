@@ -1,21 +1,5 @@
-What a great question! 
-
-as @user295691 pointed out in the coments, the issue is with regards to referencing a vector twice: once as the object being indexed and once as the subject of a condition. It does appear impossible to avoid the double reference. 
-
-    numericVector[cond(numericVector)] <- newVal
-
-
-What I think we can do is have a nice and neat function so that instead of 
-
-     # this  
-     y$Category1[is.na(y$Category1)] <- list(NULL)
-
-
-     # we can have this: 
-     NAtoNULL(y$Category1)
-
-
-I put together a function selfAssign, and then a few wrappers to it as follows: 
+Workhorse function is `selfAssign`. 
+There are a few wrappers to it as follows: 
 
     NAtoNULL(obj)      # Replaces NA values in obj with NULL.
     NAtoVal(obj, val)  # Replaces NA values in obj with val.
@@ -78,4 +62,4 @@ Example:
     7    G   NA 0.8481
 
 
-Right now this works for vectors, but will fail with *apply. I would love to get it working fully, especially with applying plyr. The key would be to modify 
+Right now this works for vectors, but will fail with *apply. 
