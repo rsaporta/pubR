@@ -84,6 +84,7 @@ getNode <- function(NODE.Number, JSON=TRUE) {
   return(html)
 }
 
+
 deleteNode <- function(NODE.Number, force=FALSE) { 
 # TODO:  Put in more error-chcecking. 
 #        Confirm Node exists
@@ -216,7 +217,6 @@ updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  {
 allNodeIDs.cyp <- "START n=node(*);  RETURN ID(n);"
 
 
-
 qu <- function(x) { 
  # wraps quote mark
   # x should be a unit-length vector. All other types, user *ply or other iterations
@@ -233,10 +233,10 @@ qu.s <- function(..., sep=" ", collapse = NULL) {
 
 qu.braced <- function(...) { 
   x <- paste(unlist(list(...)), sep=" ", collapse=", ")
-  paste0("'{", x,  "}'")
+  paste0("{", x,  "}")
 }
 
-updateNode <- function(QRY, PARAMS="", retJSON=TRUE)  {
+CypherQry <- function(QRY, PARAMS="", dontParse=FALSE, retDF=TRUE)  {
 
   QuotedQRY    <- paste0( qu("query"),  ":",  qu(QRY) )
   QuotedPARAMS <- paste0( qu("params"), ":",  ifelse(nchar(PARAMS), qu(PARAMS), "{}"))
@@ -245,24 +245,46 @@ updateNode <- function(QRY, PARAMS="", retJSON=TRUE)  {
 
   H.cyp <- httpPOST(u.cypher, httpheader = jsonHeader, postfields = properties)
 
-} 
+  H.cyp <- rawToChar(H.cyp)
 
+  # if flagged, return unparsed char
+  if (dontParse)
+    return(H.cyp)
 
-{
-  "query" : "start x  = node(167) match x -[r]-> n return type(r), n.name?, n.age?",
-  "params" : {
+  ret.list <- fromJSON(H.cyp)
+
+  # if flagged, don't return DF, just the JSON
+  if (!retDF)
+    return(ret.list)
+
+  # else, convert to data.table if possible, else to data.frame and return that  
+
+  nms <- ret.list$columns
+  DF  <- ret.list$data
+
+  # check if data.table present
+  if (exists("data.table")){
+    DT <- setnames(data.table(DF), nms) 
+    return(DT )
   }
+
+  # else, return data.frame
+  return(setNames(as.data.frame(DF), nms))
 }
 
 
+  
+  ## EXAMPLE: 
+  # get all nodes
+  QRY <- " START n=node(*)  RETURN ID(n)"
+  CypherQry(QRY)
 
 
-JU(as.path(u.node, 11))$data
-
-getNode(11)$data
 
 
-egJ <- toJSON(DT.Nodes.Concs.artist[4e3])
+
+
+
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
