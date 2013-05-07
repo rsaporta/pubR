@@ -4,6 +4,23 @@ library(RCurl)
 library(rjson)
 
 
+# -------------------------------------------- #
+#                                              #
+#             URL's & CURL OPTIONS             #
+#                                              #
+# -------------------------------------------- #
+
+
+u.base   <- "http://localhost:7474/db/data/"
+u.cypher <- as.path(u.base, "cypher")
+u.node   <- as.path(u.base, "node")
+
+
+# options for CURL
+jsonHeader = c("Content-Type" = "application/json", "Accept" = "application/json")
+
+
+
 # ------------------------------------------- #
 #                                             #
 #              WRAPPER FUNCTIONS              #
@@ -29,17 +46,49 @@ getNode <- function(NODE.Number, JSON=TRUE) {
   return(html)
 }
 
+deleteNode <- function(NODE.Number, force=FALSE) { 
+# TODO:  Put in more error-chcecking. 
+#        Confirm Node exists
+#        Confirm does not have any relationships
+#        Confirm deletion occured (ie, node not found)
+#
+#  Returns TRUE  if deletion occured
+#          FALSE if attempted but failed
+#          NULL  if user canceletd at confirmation
+# ---------------------------------------------- #
 
-# ------------------------------------------ #
-#                                            #
-#                   URL's                    #
-#                                            #
-# ------------------------------------------ #
 
-u.base   <- "http://localhost:7474/db/data/"
-u.cypher <- as.path(u.base, "cypher")
-u.node   <- as.path(u.base, "node")
+    cat ("Deleting Node # ", NODE.Number, "\n")   
 
+    # only ask for confirmation if `force` is false
+    if (!force) 
+      confirm   <- readline("are you sure [y/n]?  > ")
+
+
+    if (force || substr(tolower(confirm), 1, 1) == "y" ) {
+      H.delete  <- try(httpDELETE(as.path(u.node, NODE.Number), httpheader = jsonHeader), silent=TRUE)
+      
+      if (inherits(H.delete, "try-error")) {
+        if (grepl("Error : Not Found", H.delete[[1]])) {
+          warning("Node ", NODE.Number, " was not found and hence could not be deleted.")
+          return(FALSE)
+        }
+        # else: dont know why it delete failed: 
+        warning("Node ", NODE.Number, " could not be deleted for an unknown reason.")
+        return (FALSE)    
+      }
+
+      # node was succesfully deleted 
+      return(TRUE) 
+    }
+
+    # else, user did not select "yes" at confirmation
+    cat("Node-deletion was canceled by user")
+    return(NULL)
+}
+
+
+createNode <- function()
 
 # ------------------------------------------ #
 #                                            #
@@ -75,7 +124,16 @@ U <- "http://localhost:7474/db/data/node"
 
 httpPOST(u.node, .opts=curl.opts)
 
-H1 <- httpPOST(u.node, httpheader = c('Content-Type' = 'application/json', Accept = 'application/json'), postfields = egJ)
+H.post <- httpPOST(u.node, httpheader = c('Content-Type' = 'application/json', Accept = 'application/json'), postfields = egJ)
+H.put  <- httpPUT (u.node, httpheader = c('Content-Type' = 'application/json', Accept = 'application/json'), postfields = egJ)
+
+H.delete  <- httpDELETE(as.path(u.node, 11), httpheader = c('Content-Type' = 'application/json', Accept = 'application/json'))
+
+
+, postfields = egJ)
+
+
+
 
 H2 <- httpPOST(u.node, 'Content-Type' = 'application/json', Accept = 'application/json', postfields = egJ)
 
