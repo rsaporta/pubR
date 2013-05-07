@@ -58,7 +58,7 @@ deleteNode <- function(NODE.Number, force=FALSE) {
 # ---------------------------------------------- #
 
 
-    cat ("Deleting Node # ", NODE.Number, "\n")   
+    cat ("\n\nDeleting Node # ", NODE.Number, "\n")   
 
     # only ask for confirmation if `force` is false
     if (!force) 
@@ -88,7 +88,31 @@ deleteNode <- function(NODE.Number, force=FALSE) {
 }
 
 
-createNode <- function()
+createNode <- function(properties=NULL, retJSON=TRUE) {
+# TODO:   What is the difference between giving an explicit node number or not? 
+#         What if the node number already exists. 
+#
+# Args:   
+#     Properties:  Character. expected as a single JSON string.  This could change in the future. 
+#     retJSON   :  Boolean.   if TRUE, return value will be converted to JSON prior to returning.  
+#                   (converting to JSON increase object size 4x-fold. If this is a concern, turn off)
+
+  # error check
+  if (length(properties) > 1) { 
+    stop("\n\n\t`properties` should be a unit-length character in R,\n\tcontaining a JSON string.\n\n")
+  }
+
+  # create the object
+  H.post <- httpPOST(u.node, httpheader = jsonHeader, postfields = properties)
+  H.post <- rawToChar(H.post)
+
+  if (retJSON)
+    return(fromJSON(H.post))
+  return(H.post)
+}
+
+
+
 
 # ------------------------------------------ #
 #                                            #
