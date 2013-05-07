@@ -63,3 +63,62 @@ txrL.In <-  transferLibrary.In <- function(dir="~/git/misc/!SysAdmin", fileName=
   if (update)
     update.packages(checkBuilt=TRUE)
 }
+
+  # ------------------------------------------------------------------------------------ #
+
+
+##   as.path  is maintained in the `utilsRS.r` file
+##    copy+pasted here on 5/7/2013 
+as.path <- function(..., ext="", fsep=.Platform$file.sep, expand=TRUE) {
+# concatenates the `...` into a valid path, accounting for extra slashes and dot-dot's
+
+  dots <- list(...)
+
+  dots <- dots[!sapply(dots, is.null)]
+
+  ## If first argument starts with "http" or "ftp" then fsep should be "/", unless specified otherwise
+  if(any(grepl("^(http|ftp)", as.character(dots[[1]]))) && missing(fsep))
+    fsep <- "/"
+
+  # error check
+  if (any(grepl("^/~", dots[[1]])))
+    stop ("Path cannot start with `/~`\nDid you mean to just use `~` ?")
+
+  ## If starts with fsep, we will preserve it.
+  startWith <- ifelse(substr(dots[[1]], 1, 1) == fsep, fsep, "")
+  
+  # Clean up the input (removing superfluous slashes, dots, etc)
+  cleaned <- lapply(dots, function(x) {      
+                # remove any leading slashes
+                x <- ifelse(substr(x, 1, 1) == fsep, substr(x, 2, nchar(x)), x) 
+                
+                # remove any trailing slashes
+                lng <- nchar(x)
+                x <- ifelse(substr(x, lng, lng) == fsep, substr(x, 1, lng-1), x) 
+
+                # return x to cleaned
+                x
+              })
+
+  cleaned[!sapply(cleaned, function(x) identical(nchar(x), integer(0)))]
+
+  # put back any starting fsep
+  cleaned[[1]] <- paste0(startWith,cleaned[[1]])
+
+  # append '.ext' to last item
+  if (!ext=="")
+    cleaned[[length(cleaned)]] <- paste0(cleaned[[length(cleaned)]], ".", gsub("^\\.", "", ext))
+
+  # checking for '..'   ie:  "~/git/" +  "../out" =>  "~/out"
+  if(any (  grepl("\\.\\.", cleaned) )) {
+    return(cleanDotDotPath, fsep=fsep, expand=expand)
+  }
+
+  # else
+  putTogether <- do.call(file.path, c(cleaned, fsep=fsep))
+
+  if (!expand)
+      return(putTogether)
+  return(path.expand(putTogether))
+}
+
