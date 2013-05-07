@@ -1,3 +1,41 @@
+### SAMPLE DATA
+
+
+### MAKE SURE TO LOAD IN THE FUNCTIONS FIRST 
+
+
+
+### LOAD IN THE DATA FRAME
+DF <- 
+    structure(list(node = c(500, 501, 502, 503, 504, 505), type = c("artist", 
+    "artist", "artist", "artist", "artist", "artist"), name = c("6 Market Blvd.", 
+    "6 Pack Deep", "60 Second Crush", "60's Rock n' Roll Show: Tommy James & the Shondells", 
+    "60th Anniversary Celebration", "65daysofstatic"), id = c("ART000500", 
+    "ART000501", "ART000502", "ART000503", "ART000504", "ART000505"
+    ), sourceGrp = c("Concs", "Concs", "Concs", "Concs", "Concs", 
+    "Concs")), .Names = c("node", "type", "name", "id", "sourceGrp"
+    ), class = "data.frame", row.names = c(NA, -6L))
+
+## CREATE SOME JSONS's FROM EACH ROW
+props1 <- toJSON(DF[1, ])
+props2 <- toJSON(DF[2, ])
+props3 <- toJSON(DF[3, ])
+props4 <- toJSON(DF[4, ])
+
+# LOAD IN SOME NODES
+newNode1  <- createNode(props1)
+newNode2 <- createNode(props2)
+
+
+## Have a look: 
+  newNode1$data
+## Compare: 
+  DF[1, ]
+
+
+# -------------------------- ## -------------------------- ## -------------------------- #
+
+
 #  R2neo4j.r
 
 library(RCurl)
@@ -126,19 +164,16 @@ updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  {
 
   # create the object
   U <- as.path(u.node, NODE.number, "properties")
-  H.post <- httpPUT(U, httpheader = jsonHeader, postfields = properties)
-  H.post <- rawToChar(H.post)
+  H.put <- httpPUT(U, httpheader = jsonHeader, postfields = properties)
+  H.put <- rawToChar(H.put)
 
-  # if H.post is a blank string, return that
-  if (!nchar(H.post))
-    return(H.post)
+  # if H.put is a blank string, return that
+  if (!nchar(H.put))
+    return(H.put)
 
   if (retJSON)
-    return(fromJSON(H.post))
-  return(H.post)
-}
-
-
+    return(fromJSON(H.put))
+  return(H.put)
 }
 
 
@@ -147,6 +182,79 @@ updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  {
 #                  EXAMPLES                  #
 #                                            #
 # ------------------------------------------ #
+
+
+
+
+# -------------------------- ## -------------------------- ## -------------------------- #
+
+                                ## LOAD UP TO ABOVE THIS LINE 
+
+# -------------------------- ## -------------------------- ## -------------------------- #
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -------------------------------------- #
+#                                        #
+#             CYPHER QUERIES             #
+#                                        #
+# -------------------------------------- #
+
+
+allNodeIDs.cyp <- "START n=node(*);  RETURN ID(n);"
+
+
+
+qu <- function(x) { 
+ # wraps quote mark
+  # x should be a unit-length vector. All other types, user *ply or other iterations
+  paste0("\"", x,  "\"")
+}
+
+qu.s <- function(..., sep=" ", collapse = NULL) { 
+ # takes all arguments passed, pastes them, then wraps single quotes around the whole argument
+ # x should be a unit-length vector. All other types, user *ply or other iterations
+
+ x <- paste(unlist(list(...)), sep=sep, collapse=collapse)
+ paste0("'", x,  "'")
+}
+
+qu.braced <- function(...) { 
+  x <- paste(unlist(list(...)), sep=" ", collapse=", ")
+  paste0("'{", x,  "}'")
+}
+
+updateNode <- function(QRY, PARAMS="", retJSON=TRUE)  {
+
+  QuotedQRY    <- paste0( qu("query"),  ":",  qu(QRY) )
+  QuotedPARAMS <- paste0( qu("params"), ":",  ifelse(nchar(PARAMS), qu(PARAMS), "{}"))
+ 
+  properties <- qu.braced(QuotedQRY, QuotedPARAMS)
+
+  H.cyp <- httpPOST(u.cypher, httpheader = jsonHeader, postfields = properties)
+
+} 
+
+
+{
+  "query" : "start x  = node(167) match x -[r]-> n return type(r), n.name?, n.age?",
+  "params" : {
+  }
+}
+
+
 
 
 JU(as.path(u.node, 11))$data
