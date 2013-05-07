@@ -112,6 +112,34 @@ createNode <- function(properties=NULL, retJSON=TRUE) {
 }
 
 
+updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  { 
+# Args:     
+#     NODE.Number:  Numeric or Character. Which node number to udpate
+#     Properties :  Character. expected as a single JSON string.  This could change in the future. 
+#     retJSON    :  Boolean.   if TRUE, return value will be converted to JSON prior to returning.  
+#                   (converting to JSON increase object size 4x-fold. If this is a concern, turn off)
+
+  # error check
+  if (length(properties) > 1) { 
+    stop("\n\n\t`properties` should be a unit-length character in R,\n\tcontaining a JSON string.\n\n")
+  }
+
+  # create the object
+  U <- as.path(u.node, NODE.number, "properties")
+  H.post <- httpPUT(U, httpheader = jsonHeader, postfields = properties)
+  H.post <- rawToChar(H.post)
+
+  # if H.post is a blank string, return that
+  if (!nchar(H.post))
+    return(H.post)
+
+  if (retJSON)
+    return(fromJSON(H.post))
+  return(H.post)
+}
+
+
+}
 
 
 # ------------------------------------------ #

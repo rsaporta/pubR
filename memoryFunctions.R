@@ -1,20 +1,29 @@
-# BASIC USAGE: 
-#  Call the lsos() function, which wraps .ls.objects()
-#  lsos()
-#  lsos(n=23)
-#  lsos(n=23, type=c("!function", "!logical"))
 
+# QUICK USAGE: 
 
-# From Petr Pikal and David Hinds 
-# via Dirk Eddelbuettel
+## BASIC: 
+#  lsos()  ## Show all objects with memory size over 1KB, not including functions
+
+## RESTRICT NUMBER OF OUTPUTS
+#  lsos(n=12)  ## Same as above, but just top 12, by `order.by` (default: decreasing size) 
+
+## DON'T SHOW CHARACTERS OR LOGICALS.  Any of the following work
+#  lsos(type=c("!character", "!logical"))  # ! to indicate not. Quoted vecotr
+#  lsos(type=c("!character", "logical"))  # ! on first element, applied to ALL elements
+#  lsos(type=c("!character,logical"))  # single quoted string, comma separated, works too
+
+## NOTE: `type` defaults to "!function", but if the desired output is (for example) 
+##        'not functions and not characters', then both need to be specified
+#  lsos(type="!function,!character")  OR:   lsos(type="!function,character")
+
+# .ls.objects was adapted from Petr Pikal and David Hinds via Dirk Eddelbuettel
 # http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 
-# improved list of objects
-.ls.objects <- function (pos = 1, pattern, order.by, decreasing=FALSE, head=FALSE, n=5, type="") {
+.ls.objects <- function (pos = 1, pattern, order.by, decreasing=FALSE, head=FALSE, n=5, type="", all.names = FALSE) {
 
   napply <- function(names, fn) 
               sapply(names, function(x) fn(get(x, pos = pos)))
-  names     <- ls(pos = pos, pattern = pattern)
+  names     <- ls(pos = pos, pattern = pattern, all.names=all.names)
   obj.class <- napply(names, function(x) as.character(class(x))[1])
   obj.mode  <- napply(names, mode)
   obj.type  <- ifelse(is.na(obj.class), obj.mode, obj.class)
@@ -35,8 +44,19 @@
   # only return objects of type specified
   if(nchar(type) && !is.na(type)) { 
 
+    if (type=="all")
+      return(out)
+
+    # split it, to allow for quoted string or vector of quote strings
+    type <- unlist(strsplit(type, ","))
+
     # look for "!" prefix
     isneg <- grepl("^!", type)
+
+    # negative in **only** the first element is considered negative to all. 
+    # negative mixed in other manner is considered positive and issues warning due to ambiguity
+    if (isneg[[1]])
+      isneg[ ] <- TRUE
 
     # should not be mixed neg/pos
     if (any(isneg) && !all(isneg)) {
@@ -52,13 +72,22 @@
   out
 }
 
-# shorthand, edited for data.table use
-lsos <- function(..., n=10, KB=TRUE, type="", showfuncs=FALSE, byteMin=1000) {
+# shorthand wrapper to .ls.objects
+# cleaner output and uses data.table if available
+lsos <- function(..., n=10, MB=TRUE, KB=TRUE, type="", showfuncs=FALSE, byteMin=b, b=1000) {
+
+  # for if statement later
+  byteMinMissing <- missing(byteMin)
 
   if(missing(type) && !showfuncs)
     type <- "!function"
 
   out <- .ls.objects(..., order.by="Size", decreasing=TRUE, head=!missing(n), n=n, type=type)
+
+  if (nrow(out)==0) {
+    warning("\n\tNo objects of selected type in memory.\n\tTry argument:  lsos(type=\"all\") ")
+    return(NA)
+  }
 
   # as long as byteMin is a valid number
   suppressWarnings(byteMin <- as.numeric(byteMin))
@@ -67,16 +96,24 @@ lsos <- function(..., n=10, KB=TRUE, type="", showfuncs=FALSE, byteMin=1000) {
     
     # no values larger than requested limit
     if(!any(aboveSize)) {
-      if (!missing(byteMin)) warning("No object is larger than ", byteMin, " bytes. Displaying all objects of (un)selected type(s).")
+      if (!byteMinMissing) 
+        warning("No object is larger than ", byteMin, " bytes. Displaying all objects of (un)selected type(s).")
     } else {
       out <- out[aboveSize, ]
     }
   }
 
-  if (KB)  {
+  if (MB) {
+    out[, "KB"] <- formatKB(out[, "Size"] / 2^10, MB=TRUE)
+    out <- out[ , c("KB", setdiff(names(out), c("KB", "Size")))]
+  }
+
+
+  if (KB & !MB)  {
     out[, "Size"] <- formatKB(out[, "Size"] / 2^10)
     names(out)[names(out) == "Size"] <- "KB"    
   }
+
 
   if (!exists("data.table"))
     return(out)
@@ -84,14 +121,17 @@ lsos <- function(..., n=10, KB=TRUE, type="", showfuncs=FALSE, byteMin=1000) {
   data.table(Name=rownames(out), out)
 }
 
-formatKB <- function(x, MB=FALSE) { 
+formatKB <- function(x, MB=FALSE, MBthresh=600) { 
+# This is a quick and dirty function to convert bytes to KB
+# for cleaner output
   ret <- x
   for (i in 5:(-2))
     ret[x < 5 * 10^(i)] <- round( x[x < 5 * 10^(i)],  -(i)+1)
 
-  if (MB)
-    ret[ret>1000] <- paste(round(ret[ret>1000]/1000), "MB")
-  
+  if (MB) {
+    mb <- ret[ret>MBthresh]/1000
+    ret[ret>MBthresh] <- ifelse(mb > 100, paste(round(mb), "MB"), paste(round(mb, 1), "MB"))
+  }
   prettyNum(ret)
 }
 

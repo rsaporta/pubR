@@ -15,6 +15,7 @@
 
 
 printFunctList <- function(fnlist, pre="# ") {
+  cls()
   if (inherits(fnlist, "file") || (length(f)==1 && grepl("\\.[rR]$", fnlist)))
     fnlist <- findFnsInFile(fnlist)  
   cat("\n", paste(pre, fnlist, "\n"), "\n")
@@ -25,7 +26,8 @@ printFunctList <- function(fnlist, pre="# ") {
 findFnsInFile <- function(f) {
 # find any named (non-annonymous) functions in a file
 
-  library(stringr)  # for findLastBracket
+  require(stringr)  # for findLastBracket
+  require(data.table)
 
   # If f is not a connection (ie a string of file path), open file connection
   if (! inherits(f, "file"))
@@ -36,7 +38,7 @@ findFnsInFile <- function(f) {
   close(f)
 
   # remove all comments
-  tlines <- gsub("\\s*#.*", "", tlines)
+  tlines <- gsub("(^|\\s+)#.*", "", tlines)
   # remove blank lines
   tlines <-  tlines[tlines != ""]
   # collapse into a single string
@@ -53,9 +55,9 @@ findFnsInFile <- function(f) {
 
   # THESE ARE THE REGEX PATTERNS TO FIND FUNCTIONS
   #               first var name      (s  <- s second var name)*  s  <- s
-  vname <- "\\b[.A-Za-z][.A-Za-z0-9$]*(\\s*<-\\s*[.A-Za-z0-9$]*)*\\s*<-\\s*"
+  vname <- "\\b[\\.A-Za-z][\\.A-Za-z0-9_$]*(\\s*<-\\s*[\\.A-Za-z0-9_$]*)*\\s*<-\\s*"
   funct <- "function\\s*\\(" 
-  # TODO find `excep %=% tions`  ie "^'{1}[pattern1]'$" 
+  # TODO find `excep %=% tions`  ie  quoted special characters, possibly: "^'{1}[pattern1]'$" 
   # TODO add in  equal sign
 
 
@@ -101,7 +103,8 @@ findLastBracket <- function(string, start, nchars=100) {
     
     # temp work around for '=="eval(")' ~~> ')'     
     errd <- regexpr('==\\"eval\\(\\"\\)', string) + 7
-    openBrackets <- openBrackets[openBrackets!=errd]
+    if(!all(attr(errd, "match.length")==-1))
+      openBrackets <- openBrackets[openBrackets!=errd]
 
 
   # whenever CL[n] > OP[n+1], then n is the index of a closing paren 
