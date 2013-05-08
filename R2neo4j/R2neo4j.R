@@ -1,39 +1,27 @@
-### SAMPLE DATA
+ #  getNode ( NODE.Number, JSON=TRUE ) 
+ #  deleteNode ( NODE.Number, force=FALSE, verbose=TRUE ) 
+ #  createNode ( properties=NULL, retJSON=TRUE ) 
+ #  updateNode ( NODE.numer, properties=NULL, retJSON=TRUE ) 
+ #  deleteAllNodes (  ) 
+ #  createNodesFromDT ( DT ) 
+
+ #  deleteRelationship ( REL.Number, force=FALSE, verbose=TRUE ) 
+ #  deleteAllRelationships (  ) 
+ #  createRelationship ( start, type, end, props.list, dontParse=FALSE, retList=FALSE ) 
+
+ #  getAllNodeIDs ( retVec=FALSE ) 
+ #  getAllRelIDsFromNodes ( nodes=getAllNodeIDs(retVec=TRUE), BiDirectional=FALSE, retVec=FALSE, force=FALSE ) 
+
+ #  CypherQry ( QRY, PARAMS="", dontParse=FALSE, retDF=TRUE ) 
+
+ #  parseNumberFromOutput ( U ) 
+ #  qu ( x ) 
+ #  qu.s ( ..., sep=" ", collapse = NULL ) 
+ #  qu.braced ( ... ) 
+ #  JU ( URL ) 
+ #  JR ( raw ) 
 
 
-### MAKE SURE TO LOAD IN THE FUNCTIONS FIRST 
-
-
-
-### LOAD IN THE DATA FRAME
-DF <- 
-    structure(list(node = c(500, 501, 502, 503, 504, 505), type = c("artist", 
-    "artist", "artist", "artist", "artist", "artist"), name = c("6 Market Blvd.", 
-    "6 Pack Deep", "60 Second Crush", "60's Rock n' Roll Show: Tommy James & the Shondells", 
-    "60th Anniversary Celebration", "65daysofstatic"), id = c("ART000500", 
-    "ART000501", "ART000502", "ART000503", "ART000504", "ART000505"
-    ), sourceGrp = c("Concs", "Concs", "Concs", "Concs", "Concs", 
-    "Concs")), .Names = c("node", "type", "name", "id", "sourceGrp"
-    ), class = "data.frame", row.names = c(NA, -6L))
-
-## CREATE SOME JSONS's FROM EACH ROW
-props1 <- toJSON(DF[1, ])
-props2 <- toJSON(DF[2, ])
-props3 <- toJSON(DF[3, ])
-props4 <- toJSON(DF[4, ])
-
-# LOAD IN SOME NODES
-newNode1  <- createNode(props1)
-newNode2 <- createNode(props2)
-
-
-## Have a look: 
-  newNode1$data
-## Compare: 
-  DF[1, ]
-
-
-# -------------------------- ## -------------------------- ## -------------------------- #
 
 
 #  R2neo4j.r
@@ -53,6 +41,7 @@ u.base   <- "http://localhost:7474/db/data/"
 u.cypher <- as.path(u.base, "cypher")
 u.node   <- as.path(u.base, "node")
 u.rel    <- as.path(u.base, "relationship")
+u.batch  <- as.path(u.base, "batch")
 
 
 # options for CURL
@@ -192,13 +181,13 @@ updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  {
   return(H.put)
 }
 
-NodeNumberFromSelf <- function(U) { 
+parseNumberFromOutput <- function(U) { 
 ## Parse the node number for the "..$self" returned form some queries
 
   if (!any(names(U)=="self")) { 
       # if 'self' not found, recurse until no more to recurse on.
       if (length(U) > 1) {
-        return(sapply(U, NodeNumberFromSelf))
+        return(sapply(U, parseNumberFromOutput))
       } else 
    stop ("No element with 'self' found.")
   }
@@ -244,7 +233,7 @@ createNodesFromDT <- function(DT) {
   ret <- apply(DT, 1, function(x) createNode(properties=toJSON(x))  ) 
 
   # return node numbers 
-  nodesCreated <- NodeNumberFromSelf(ret)
+  nodesCreated <- parseNumberFromOutput(ret)
 
   return(as.integer(nodesCreated))
 }
@@ -261,6 +250,54 @@ getAllNodeIDs <- function(retVec=FALSE) {
   #else
   ret
 }
+
+
+batchCreateFromDT <- function(DT, what=c("nodes", "relationships"), idcol="node", saveToGlobal=TRUE) {
+## TODO: have a sepearte method for data.frame / data.table.  Different syntax
+
+  # confirm idcol is in the names of DT. 
+  if(any(idcol==names(DT))) {
+    useID <- TRUE
+    idcol.idx <- which(idcol==names(DT))
+  } else {
+      if (!missing(idcol))
+        warning("Couldn't find idcol, '", idcol, "' amongst the names of DT")
+  }
+
+  # `what` should be either "nodes" or "relationships" (or a shorter form of either)
+  what <- match.arg(what)
+
+  method <- "POST"
+  to     <- paste0("/", substr(what, 1, nchar(what)-1))
+  
+  # This creates the body:  body   <- apply(DT.arts, 1, as.list)
+  #  we will combine with `method` & `to`, above, into one shot. 
+
+  # repeated lines, but faster code 
+  if (useID) {
+    batchCall <- apply(DT.arts, 1, function(x) 
+                   toJSON(list(method=method, to=to, body=as.list(x[-idcol.idx]), id=as.numeric(x[idcol.idx])  ))   )
+  } else {
+    batchCall <- apply(DT.arts, 1, function(x) 
+                 toJSON(list(method=method, to=to, body=as.list(x)))   )
+  }
+
+  content <- paste0("[", paste(batchCall, collapse=", "), "]" )
+  H.post  <- getURL(u.batch, httpheader = jsonHeader, postfields = content)
+
+  # incase user forgot to assign the output to an object, we dont want the handle to just dissappear. 
+  if (saveToGlobal) {
+    saveTo <- paste0("LastBatchCreate.", what)
+    assign(saveTo, H.post, envir=.GlobalEnv)
+    cat("Neo4j response saved to\n  `", saveTo, "`\n", sep="")
+  }
+
+  return(H.post)
+}
+
+
+
+
 
 
 # ------------------------------------------- #
@@ -406,7 +443,7 @@ createRelationship <- function(start, type, end, props.list, dontParse=FALSE, re
     return(ret.list)
 
   # else return the new relationship number
-  NodeNumberFromSelf(ret.list)
+  parseNumberFromOutput(ret.list)
 
 }
 
@@ -523,4 +560,45 @@ names(props.list) <- names(row)[3:4]
 ##     createNodesFromDT(DTSample)
 ##   
 ##   
+
+
+# -------------------------- ## -------------------------- ## -------------------------- #
+
+
+### SAMPLE DATA
+
+
+### MAKE SURE TO LOAD IN THE FUNCTIONS FIRST 
+
+
+
+### LOAD IN THE DATA FRAME
+DF <- 
+    structure(list(node = c(500, 501, 502, 503, 504, 505), type = c("artist", 
+    "artist", "artist", "artist", "artist", "artist"), name = c("6 Market Blvd.", 
+    "6 Pack Deep", "60 Second Crush", "60's Rock n' Roll Show: Tommy James & the Shondells", 
+    "60th Anniversary Celebration", "65daysofstatic"), id = c("ART000500", 
+    "ART000501", "ART000502", "ART000503", "ART000504", "ART000505"
+    ), sourceGrp = c("Concs", "Concs", "Concs", "Concs", "Concs", 
+    "Concs")), .Names = c("node", "type", "name", "id", "sourceGrp"
+    ), class = "data.frame", row.names = c(NA, -6L))
+
+## CREATE SOME JSONS's FROM EACH ROW
+props1 <- toJSON(DF[1, ])
+props2 <- toJSON(DF[2, ])
+props3 <- toJSON(DF[3, ])
+props4 <- toJSON(DF[4, ])
+
+# LOAD IN SOME NODES
+newNode1  <- createNode(props1)
+newNode2 <- createNode(props2)
+
+
+## Have a look: 
+  newNode1$data
+## Compare: 
+  DF[1, ]
+
+
+# -------------------------- ## -------------------------- ## -------------------------- #
 
