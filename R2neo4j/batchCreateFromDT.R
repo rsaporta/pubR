@@ -15,6 +15,35 @@
 ##   Note that the NodesDT can have another column which is a proper node id. 
 ## ---------------------------------------------------------------------------- #
 
+##  SAMPLE TABLES
+#
+#  NodesDT 
+#
+#         node   type             name        id sourceGrp
+#        44154 artist   Theodis Easley ART044154     Concs
+#         7553 artist Chelsea Williams ART007553     Concs
+#        18414 artist      Howard Ghee ART018414     Concs
+#        40392 artist    The Balconies ART040392     Concs
+#        21770 artist    Junior League ART021770     Concs 
+#
+#      
+#  RelsDT
+#   (note that every value of start & end corresponds to a 'node' in NodesDT) 
+#
+#       start   end        type source concertID concertDate rel.id
+#       21770 44154   played_at  Concs     18011  2002-01-25      1
+#       21770 40392 played_with  Concs     86843  2006-08-29      2
+#       21770  7553 played_with  Concs     30094  2003-05-24      3
+#       40392 40392   played_at  Concs     58171  2004-11-13      4
+#        7553 18414       is_in  Concs                            5
+#       21770 40392 played_with  Concs     26415  2002-12-14      6
+#       21770 21770   played_at  Concs    126718  2009-03-28      7
+#       21770  7553   played_at  Concs     31761  2003-08-01      8
+#        7553 40392   played_at  Concs    141813  2010-03-27      9
+#        7553 21770   played_at  Concs    141799  2010-04-10     10
+#       21770  7553 played_with  Concs     33195          NA     11
+#        7553 40392   played_at  Concs    133523  2009-04-17     12
+
 
 
 batchCreateNodesAndRels <- function(NodesDT, RelsDT) { 
