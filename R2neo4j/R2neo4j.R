@@ -252,52 +252,6 @@ getAllNodeIDs <- function(retVec=FALSE) {
 }
 
 
-batchCreateFromDT <- function(DT, what=c("nodes", "relationships"), idcol="node", saveToGlobal=TRUE) {
-## TODO: have a sepearte method for data.frame / data.table.  Different syntax
-
-  # confirm idcol is in the names of DT. 
-  if(any(idcol==names(DT))) {
-    useID <- TRUE
-    idcol.idx <- which(idcol==names(DT))
-  } else {
-      if (!missing(idcol))
-        warning("Couldn't find idcol, '", idcol, "' amongst the names of DT")
-  }
-
-  # `what` should be either "nodes" or "relationships" (or a shorter form of either)
-  what <- match.arg(what)
-
-  method <- "POST"
-  to     <- paste0("/", substr(what, 1, nchar(what)-1))
-  
-  # This creates the body:  body   <- apply(DT.arts, 1, as.list)
-  #  we will combine with `method` & `to`, above, into one shot. 
-
-  # repeated lines, but faster code 
-  if (useID) {
-    batchCall <- apply(DT.arts, 1, function(x) 
-                   toJSON(list(method=method, to=to, body=as.list(x[-idcol.idx]), id=as.numeric(x[idcol.idx])  ))   )
-  } else {
-    batchCall <- apply(DT.arts, 1, function(x) 
-                 toJSON(list(method=method, to=to, body=as.list(x)))   )
-  }
-
-  content <- paste0("[", paste(batchCall, collapse=", "), "]" )
-  H.post  <- getURL(u.batch, httpheader = jsonHeader, postfields = content)
-
-  # incase user forgot to assign the output to an object, we dont want the handle to just dissappear. 
-  if (saveToGlobal) {
-    saveTo <- paste0("LastBatchCreate.", what)
-    assign(saveTo, H.post, envir=.GlobalEnv)
-    cat("Neo4j response saved to\n  `", saveTo, "`\n", sep="")
-  }
-
-  return(H.post)
-}
-
-
-
-
 
 
 # ------------------------------------------- #

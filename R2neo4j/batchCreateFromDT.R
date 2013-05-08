@@ -43,6 +43,17 @@
 #        7553 21770   played_at  Concs    141799  2010-04-10     10
 #       21770  7553 played_with  Concs     33195          NA     11
 #        7553 40392   played_at  Concs    133523  2009-04-17     12
+#
+#
+#
+#
+# --------------------------------------------------------------------------- #
+#  If you'd like to expirement, you can recreate the data, using the following: 
+#       
+#   NodesDT <- structure(list(node = c(44154, 7553, 18414, 40392, 21770), type = c("artist", "artist", "artist", "artist", "artist"), name = c("Theodis Easley", "Chelsea Williams", "Howard Ghee", "The Balconies", "Junior League"), id = c("ART044154", "ART007553", "ART018414", "ART040392", "ART021770"), sourceGrp = c("Concs", "Concs", "Concs", "Concs", "Concs")), .Names = c("node", "type", "name", "id", "sourceGrp"), class = "data.frame", row.names = c(NA, -5L))
+#   RelsDT  <- structure(list(start = c("21770", "21770", "21770", "40392", "7553", "21770", "21770", "7553", "21770", "7553"), end = c(44154, 40392, 7553, 40392, 18414, 40392, 21770, 21770, 7553, 40392),     type = c("played_at", "played_with", "played_with", "played_at",     "is_in", "played_with", "played_at", "played_at", "played_with",     "played_at"), source = c("Concs", "Concs", "Concs", "Concs",     "Concs", "Concs", "Concs", "Concs", "Concs", "Concs"), concertID = c("18011",     "86843", "30094", "58171", "", "26415", "126718", "141799",     "33195", "133523"), concertDate = c("2002-01-25", "2006-08-29",     "2003-05-24", "2004-11-13", "", "2002-12-14", "2009-03-28",     "2010-04-10", NA, "2009-04-17"), rel.id = c(1L, 2L, 3L, 4L,     5L, 6L, 7L, 10L, 11L, 12L)), .Names = c("start", "end", "type", "source", "concertID", "concertDate", "rel.id"), row.names = c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 10L, 11L, 12L), class = "data.frame")
+#    
+# --------------------------------------------------------------------------- #
 
 
 
