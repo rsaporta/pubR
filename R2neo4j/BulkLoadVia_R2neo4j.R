@@ -26,8 +26,4 @@
   DT.Nodes.Concs.artist.Loaded <- cbind(DT.Nodes.Concs.artist, Artists.NodeInputs)
   
 
-
-
-
-
-
+output <- batchCreateNodesAndRels(NODES.DT, RELS.DT, nodes.idcol="node", addSerialNumberToRels=TRUE) 

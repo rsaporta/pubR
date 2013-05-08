@@ -56,11 +56,19 @@
 # --------------------------------------------------------------------------- #
 
 
-
-batchCreateNodesAndRels <- function(NodesDT, RelsDT) { 
+                                                        # these other arguments are less important right now. 
+batchCreateNodesAndRels <- function(NodesDT, RelsDT,   nodes.idcol="node", addSerialNumberToRels=TRUE) { 
 # TODO:  Explore passing the name of the DT. Will this save efficiency (memory or time)?
 
-  content.nodes <- batchMethodsForNodes(NodesDT)
+
+  if (addSerialNumberToRels & is.data.table(RelsDT)) { 
+    maxNode <- max(NodesDT$node)
+    # round up to the next power of ten
+    starting.serial <- round(maxNode, -ceiling(log(maxNode, 10)))
+    RelsDT[, rel.id := (1:.N) + starting.serial]
+  }
+
+  content.nodes <- batchMethodsForNodes(NodesDT, idcol=nodes.idcol)
   content.rels  <- batchMethodsForRels(RelsDT)
 
   # note:  collapse if c(..), else use sep
@@ -78,7 +86,6 @@ batchCreateNodesAndRels <- function(NodesDT, RelsDT) {
   return(H.post)
 
 }
-
 
 
 
