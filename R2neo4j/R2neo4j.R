@@ -52,6 +52,7 @@ library(rjson)
 u.base   <- "http://localhost:7474/db/data/"
 u.cypher <- as.path(u.base, "cypher")
 u.node   <- as.path(u.base, "node")
+u.rel    <- as.path(u.base, "relationship")
 
 
 # options for CURL
@@ -85,7 +86,15 @@ getNode <- function(NODE.Number, JSON=TRUE) {
 }
 
 
-deleteNode <- function(NODE.Number, force=FALSE) { 
+# ------------------------------------------- #
+#                                             #
+#                NODE FUNCTIONS               #
+#                                             #
+# ------------------------------------------- #
+
+
+
+deleteNode <- function(NODE.Number, force=FALSE, verbose=TRUE) { 
 # TODO:  Put in more error-chcecking. 
 #        Confirm Node exists
 #        Confirm does not have any relationships
@@ -97,7 +106,8 @@ deleteNode <- function(NODE.Number, force=FALSE) {
 # ---------------------------------------------- #
 
 
-    cat ("\n\nDeleting Node # ", NODE.Number, "\n")   
+    if (verbose)
+      cat ("Deleting Node # ", NODE.Number, "\n")   
 
     # only ask for confirmation if `force` is false
     if (!force) 
@@ -109,12 +119,16 @@ deleteNode <- function(NODE.Number, force=FALSE) {
       
       if (inherits(H.delete, "try-error")) {
         if (grepl("Error : Not Found", H.delete[[1]])) {
-          warning("Node ", NODE.Number, " was not found and hence could not be deleted.")
+          cat("\tNode ", NODE.Number, " was not found and hence could not be deleted.\n")
           return(FALSE)
-        }
-        # else: dont know why it delete failed: 
-        warning("Node ", NODE.Number, " could not be deleted for an unknown reason.")
-        return (FALSE)    
+        } else if (grepl("Error : Conflict", H.delete[[1]])) {
+          cat("\tNode ", NODE.Number, " has a conflict (possible existing relationship) and hence could not be deleted.\n")
+        } else {
+          # else: dont know why it delete failed: 
+          cat("This Error: \n\t", H.delete, "\n")
+          warning("Node ", NODE.Number, " could not be deleted for an unknown reason.\n")
+          return (FALSE)
+        }    
       }
 
       # node was succesfully deleted 
@@ -122,7 +136,8 @@ deleteNode <- function(NODE.Number, force=FALSE) {
     }
 
     # else, user did not select "yes" at confirmation
-    cat("Node-deletion was canceled by user")
+    if (verbose)
+      cat("Node-deletion was canceled by user")
     return(NULL)
 }
 
@@ -177,31 +192,223 @@ updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  {
   return(H.put)
 }
 
+NodeNumberFromSelf <- function(U) { 
+## Parse the node number for the "..$self" returned form some queries
 
-# ------------------------------------------ #
-#                                            #
-#                  EXAMPLES                  #
-#                                            #
-# ------------------------------------------ #
+  if (!any(names(U)=="self")) { 
+      # if 'self' not found, recurse until no more to recurse on.
+      if (length(U) > 1) {
+        return(sapply(U, NodeNumberFromSelf))
+      } else 
+   stop ("No element with 'self' found.")
+  }
+
+  pattern <- paste0(u.base, "(.)+/")  # todo: look ahead: [0-9]+
+  as.integer(gsub(pattern, "", U[["self"]]))
+}
+ 
+
+##  THE FOLLOWING FUNCTION DELETES ALL NODES
+##  There is a safety bool that must be set to TRUE in order for the delete to occur
+deleteALL.allowed <- FALSE
+deleteAllNodes <- function()  { 
+# this is handy when setting things up. 
+
+  if (!deleteALL.allowed) {
+    stop("Delete All Not Allowed.\nPlease change `deleteALL.allowed` to TRUE: \n\n\tdeleteALL.allowed <- TRUE\n\n")
+  }
+
+  cat("\n\n\n\nTo continue, you must type:   Yes, I am sure.\n\n")
+  confirm <- readline("WARNING!! This will delete ALL NODES in the neo4j database. Are you sure? > ")
+  
+  if (confirm=="Yes, I am sure.") { 
+      QRY   <- "START n=node(*)  RETURN ID(n)"
+      Nodes <- CypherQry(QRY)
+      
+      if (!nrow(Nodes)) { 
+        warning("No nodes found. Nothing to delete.")
+        return(TRUE)
+      }
+
+      ret   <- apply(Nodes, 1, deleteNode, force=TRUE)
+      return(all(ret))
+  } 
+
+  warning("\nYou did not type `Yes, I am sure.`    <~~  It's gotta be exact.\nNothing deleted.\n\n")
+  return(invisible(NULL))
+}
+
+createNodesFromDT <- function(DT) { 
+# creates a node for each row in DT, where each column is a property value
+
+  ret <- apply(DT, 1, function(x) createNode(properties=toJSON(x))  ) 
+
+  # return node numbers 
+  nodesCreated <- NodeNumberFromSelf(ret)
+
+  return(as.integer(nodesCreated))
+}
+
+getAllNodeIDs <- function(retVec=FALSE) { 
+
+  allNodeIDs.cyp <- "START n=node(*)  RETURN ID(n)"
+  ret <- CypherQry(allNodeIDs.cyp)
+  setnames(ret, "NodeID")
+
+  if (retVec)
+    return(ret[, NodeID])
+
+  #else
+  ret
+}
 
 
+# ------------------------------------------- #
+#                                             #
+#           RELATIONSHIP FUNCTIONS            #
+#                                             #
+# ------------------------------------------- #
 
 
-# -------------------------- ## -------------------------- ## -------------------------- #
+getAllRelIDsFromNodes <- function(nodes=getAllNodeIDs(retVec=TRUE), BiDirectional=FALSE, retVec=FALSE, force=FALSE) { 
+## Returns all relations
 
-                                ## LOAD UP TO ABOVE THIS LINE 
+  # If asking for lots of nodes, it will take a long time. 
+  if (!force && (missing(nodes) || length(nodes>1e3)) )
+    confirm <- readline("\n\nThis will take a while, are you sure? [y/n] > ")
+  
+  if (!force && ! substr(tolower(confirm), 1, 1) =="y") {
+    cat("Smart Choice. Will not run a query for all relationships")
+    return(invisible(NULL))
+  }
 
-# -------------------------- ## -------------------------- ## -------------------------- #
+  QRY <- paste0("START n=node({startNodes}) MATCH n-[r]-", ifelse(BiDirectional, "", ">"), " friend RETURN ID(r)")
+  PARAMS<- list(startNodes=nodes)
+  ret <- CypherQry(allRelIDs.cyp, PARAMS)
+  setnames(ret, "NodeID")
+
+  if (retVec)
+    return(ret[, NodeID])
+
+  #else
+  ret
+}
 
 
+deleteRelationship <- function(REL.Number, force=FALSE, verbose=TRUE) { 
+# TODO:  Put in more error-chcecking. 
+#        Confirm Relationship exists
+#        Confirm does not have any relationships
+#        Confirm deletion occured (ie, relationship not found)
+#
+#  Returns TRUE  if deletion occured
+#          FALSE if attempted but failed
+#          NULL  if user canceletd at confirmation
+# 
+
+    if (verbose)
+      cat ("Deleting Relationship # ", REL.Number, "\n")   
+
+    # only ask for confirmation if `force` is false
+    if (!force) 
+      confirm   <- readline("are you sure [y/n]?  > ")
 
 
+    if (force || substr(tolower(confirm), 1, 1) == "y" ) {
+      H.delete  <- try(httpDELETE(as.path(u.rel, REL.Number), httpheader = jsonHeader), silent=TRUE)
+      
+      if (inherits(H.delete, "try-error")) {
+        if (grepl("Error : Not Found", H.delete[[1]])) {
+          cat("\tRelationship ", REL.Number, " was not found and hence could not be deleted.\n")
+          return(FALSE)
+        } else if (grepl("Error : Conflict", H.delete[[1]])) {
+          cat("\tRelationship ", REL.Number, " has a conflict (possible existing relationship) and hence could not be deleted.\n")
+        } else {
+          # else: dont know why it delete failed: 
+          cat("This Error: \n\t", H.delete, "\n")
+          warning("Relationship ", REL.Number, " could not be deleted for an unknown reason.\n")
+          return (FALSE)
+        }    
+      }
+
+      # relationship was succesfully deleted 
+      return(TRUE) 
+    }
+
+    # else, user did not select "yes" at confirmation
+    if (verbose)
+       cat("Relationship-deletion was canceled by user")
+    return(NULL)
+}
+
+getAllRelIDsFromNodes(force=TRUE, retVec=TRUE)
+
+deleteALL.allowed <- FALSE
+deleteAllRelationships <- function()  { 
+# this is handy when setting things up. 
+
+  if (!deleteALL.allowed) {
+    stop("Delete All Not Allowed.\nPlease change `deleteALL.allowed` to TRUE: \n\n\tdeleteALL.allowed <- TRUE\n\n")
+  }
+
+  cat("\n\n\n\nTo continue, you must type:   Yes, I am sure.\n\n")
+  confirm <- readline("WARNING!! This will delete ALL REL in the neo4j database. Are you sure? > ")
+  
+  if (confirm=="Yes, I am sure.") { 
+      Rel <- getAllRelIDsFromNodes(force=TRUE, retVec=FALSE)
+      
+      if (!nrow(Rel)) { 
+        warning("No relationships found. Nothing to delete.")
+        return(TRUE)
+      }
+
+      ret   <- apply(Rel, 1, deleteRelationship, force=TRUE)
+      return(all(ret))
+  } 
+
+  warning("\nYou did not type `Yes, I am sure.`    <~~  It's gotta be exact.\nNothing deleted.\n\n")
+  return(invisible(NULL))
+}
 
 
+createRelationship <- function(start, type, end, props.list, dontParse=FALSE, retList=FALSE) { 
+# start / end  should be integers, or integer like.
+# props.list should be a list, NOT a JSON string. 
+
+# TODO:  Add more error-check
 
 
+  # error-check
+  if(!is.list(props.list))
+    stop("`props.list` should be a list.")
+
+  # identify  START / END  url's
+  U.start <- as.path(u.node, start, "relationships")
+  U.end   <- as.path(u.node, end)
+
+  # Create nested JSON for POST method
+  nestedProperties <- toJSON(list(to=U.end, type=type, data=props.list))
+
+  # create relationship
+  H.rel <- httpPOST(U.start, httpheader = jsonHeader, postfields = nestedProperties)
 
 
+  H.rel <- rawToChar(H.rel)
+
+  # if flagged, return unparsed char
+  if (dontParse)
+    return(H.rel)
+
+  ret.list <- fromJSON(H.rel)
+
+  # if flagged, return the list of JSON parts
+  if (retList)
+    return(ret.list)
+
+  # else return the new relationship number
+  NodeNumberFromSelf(ret.list)
+
+}
 
 
 
@@ -214,7 +421,6 @@ updateNode <- function(NODE.numer, properties=NULL, retJSON=TRUE)  {
 # -------------------------------------- #
 
 
-allNodeIDs.cyp <- "START n=node(*);  RETURN ID(n);"
 
 
 qu <- function(x) { 
@@ -238,8 +444,13 @@ qu.braced <- function(...) {
 
 CypherQry <- function(QRY, PARAMS="", dontParse=FALSE, retDF=TRUE)  {
 
+  if (is.list(PARAMS))
+    PARAMS <- toJSON(PARAMS)
+
   QuotedQRY    <- paste0( qu("query"),  ":",  qu(QRY) )
-  QuotedPARAMS <- paste0( qu("params"), ":",  ifelse(nchar(PARAMS), qu(PARAMS), "{}"))
+  QuotedPARAMS <- paste0(qu("params"), ":", ifelse(nchar(PARAMS),  PARAMS, "{}"))
+  # buggy:  QuotedPARAMS <- paste0( qu("params"), ":",  ifelse(nchar(PARAMS), qu(PARAMS), "{}"))
+
  
   properties <- qu.braced(QuotedQRY, QuotedPARAMS)
 
@@ -273,16 +484,46 @@ CypherQry <- function(QRY, PARAMS="", dontParse=FALSE, retDF=TRUE)  {
 }
 
 
+
+
+set.seed(1); DT.Rel.Concs.artist.played_at.venue[1e3 + sample(1e5, 10)] -> DTSample.rels
+row <- DTSample.rels[1]
+props.list <- as.list(row[, 3:4])
+names(props.list) <- names(row)[3:4]
+
+# -------------------------- ## -------------------------- ## -------------------------- #
+
+                                ## LOAD UP TO ABOVE THIS LINE 
+
+# -------------------------- ## -------------------------- ## -------------------------- #
+
+
+
+# ------------------------------------------ #
+#                                            #
+#                  EXAMPLES                  #
+#                                            #
+# ------------------------------------------ #
+
+
+
+
   
   ## EXAMPLE: 
   # get all nodes
-  QRY <- " START n=node(*)  RETURN ID(n)"
+  QRY <- "START n=node(*)  RETURN ID(n)"
   CypherQry(QRY)
 
 
 
+lsos(pattern="DT.Nodes")
+
+# sample the data.table
+set.seed(1)
+DTSample <- DT.Nodes.Concs.artist[sample(5e3, 100)]
 
 
+  createNodesFromDT(DTSample)
 
 
 
