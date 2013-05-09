@@ -62,42 +62,13 @@ getRelationsFromRows <- function(sourceDT, start.col, relation, end.col, include
                  , start.col=start.col, end.col=end.col, sourceGrp=sourceGrp
                  , keep.names=keep.names, additional=additional) 
 
-
-
-  # ----------------     FROM HERE ON DOWN, THE TWO FUNCTIONS ARE IDENTICAL.     ---------------- #
-
-#%%  
-#%%    # grab a handle on the new DT (ease of coding to avoid repetitive `get(DT.nm)`)
-#%%    DT <- get(DT.nm)
-#%%  
-#%%    # Nodes: Add start & end nodes table and assign it to the name contained in DT.nm
-#%%    getStartEndNodes(DT, start.col, end.col, sourceGrp=sourceGrp)
-#%%  
-#%%    # add relation type
-#%%    DT[, type := relation ]
-#%%  
-#%%  
-#%%    # now with nodes added, drop the original start & end columns. (If flagged)
-#%%    if (!keep.names)
-#%%      DT[ , c(start.col, end.col) := NULL]
-#%%  
-#%%    # add additional columns
-#%%    if (length(additional))
-#%%      DT[, c(names(additional)) := additional]
-#%%  
-#%%    # set up new colorder.                                          # `by` here can be replaced with `include` in other func.
-#%%    colorder <- c("start", {if(keep.names) start.col}, "end", {if(keep.names) end.col}, "type", by, names(additional) )
-#%%    colorder <- intersect(colorder, names(DT))
-#%%    setcolorder(DT, colorder)
-
   if (verbose) 
     msgCreatedTable(DT.nm)
 
-    # All good! 
-    rm(DT)
-    return(invisible(TRUE))
+  # All good! 
+  return(invisible(TRUE))
 
-  }
+}
 # ------------------------------------------------------- #
 
 
@@ -145,17 +116,36 @@ getRelationsWithinColumnByKey <- function(sourceDT, start.col, relation, by=list
   end.col <- "end.nm"
 
 
-  # ----------------     FROM HERE ON DOWN, THE TWO FUNCTIONS ARE IDENTICAL.     ---------------- #
-  # ----------------           assuming we let  `include <- by`                  ---------------- #
+  completeRelsDT( DT=get(DT.nm, envir=parent.frame(pos)) 
+                 , start.col=start.col, end.col=end.col, sourceGrp=sourceGrp
+                 , keep.names=keep.names, additional=additional) 
+
+  if (verbose) 
+    msgCreatedTable(DT.nm)
+
+  # All good! 
+  return(invisible(TRUE))
+
+}
+
+# ------------------------------------------------------- #
 
 
-  # grab a handle on the new DT (ease of coding to avoid repetitive `get(DT.nm)`)
-  DT <- get(DT.nm)
+
+completeRelsDT <- function(DT, start.col, end.col, sourceGrp, keep.names=FALSE, additional=NULL) { 
+## Once each relations data.table (regardless if column-wise or row-wise) is created, this function will 
+##    then call the look-up-nodes funciton and then clean up the rest of the table
+
+  if (is.character(DT))  
+    DT <- get(DT)
+
+  if (!is.data.table(DT))
+    stop("`DT` should be a data.table or the name of a data.table")
 
   # Nodes: Add start & end nodes table and assign it to the name contained in DT.nm
-  getStartEndNodes(DT, c(artist=start.col), c(artist=end.col), sourceGrp=sourceGrp, selfRelate=selfRelate)
+  getStartEndNodes(DT, start.col, end.col, sourceGrp=sourceGrp)
 
-  # add relation type
+  # add node type, ie, "relation"
   DT[, type := relation ]
 
   # now with nodes added, drop the original start & end columns. (If flagged)
@@ -166,21 +156,18 @@ getRelationsWithinColumnByKey <- function(sourceDT, start.col, relation, by=list
   if (length(additional))
     DT[, c(names(additional)) := additional]
 
-
-  # set up new colorder.                                          
+  # set up new colorder.                                          # `by` here can be replaced with `include` in other func.
   colorder <- c("start", {if(keep.names) start.col}, "end", {if(keep.names) end.col}, "type", by, names(additional) )
   colorder <- intersect(colorder, names(DT))
   setcolorder(DT, colorder)
 
-  if (verbose) 
-    msgCreatedTable(DT.nm)
-
   # All good! 
   rm(DT)
   return(invisible(TRUE))
+
 }
 
-# ------------------------------------------------------- #
+
 
 
 # -------------------------------------------------------- #
@@ -222,41 +209,63 @@ msgCreatedTable <- function(DT.nm) {
       cat("\nCreated DT:\n\t", DT.nm, "\n\n")  
 }
 
-# all rels must be a single file. If they do not have a property, that column should be blank.
-combineRelDTs <- function(RELS.DT.Names) {
- 
-  RELS.DT.as.list <- lapply(RELS.DT.Names, function(x) get(x, envir=parent.frame()))    
-  
+combineRelDTs <- function(RELS.DT.Names, verbose=FALSE) {
+## This function rbind's a collection of relationship DT's.  
+##
+## More specifically, it takes as input a vector (or list) of DT names
+##   pre-processes each DT, then flattens with `rbindlist`
+##
+
   # The final RELS DT will have one column for each property. 
   #   If a specific type of relationship does not have a given property, 
   #   then that column will be blank for the row(s) corresponding to that property
-  allNames  <- lapply(RELS.DT.as.list, names)
+  # Therefore, we grab all the (unique) column names of all the tables. 
+  allNames  <- lapply(RELS.DT.Names, function(x) names(get(x, envir=parent.frame())[1]))    
   allNames  <- unique(unlist(allNames))
 
+  # We then order the values of `allNames` according to the order which the final output will have
   # column ordering. Certain columns come to the front. Then the rest simply organized
   firstCols <- c("start", "end", "type", "source", "id", "WRONG") # note, `WRONG` is included just to confirm that it is dropped in the next line. And id will be included only if present
+
   # grab the intersection of all names (ie, names present) with firstCols and then `setdiff` gives us all of the `allNames` that remain
   allNames  <- c(intersect(firstCols, allNames),  setdiff(allNames, firstCols))
 
-  # create it in each table
-  for (i in seq(RELS.DT.as.list) ) {
+  # Iterate over each table, cleaning up column classes and padding empty properties
+  for (i in seq(RELS.DT.Names) ) {
+
+    DTR <- get(RELS.DT.Names[[i]], envir=parent.frame())
 
     # identify which columns will need to be created and padded with blanks
-    missingCols <- setdiff(allNames, names(RELS.DT.as.list[[i]]))
+    missingCols <- setdiff(allNames, names(DTR))
 
     # convert most columns to characters (except numerics)
-    convertColumnsToCharacter(RELS.DT.as.list[[i]], "nonNumeric")
+    convertColumnsToCharacter(DTR, "nonNumeric")
 
     # if padded is needing, do it
     if(length(missingCols))
-       RELS.DT.as.list[[i]][, c(missingCols) := ""]
+       DTR[, c(missingCols) := ""]
 
     # reorder according to the ordering in `allNames`
-    setcolorder(RELS.DT.as.list[[i]], allNames)
+    setcolorder(DTR, allNames)
   }
 
-  # collapse it. 
-  rbindlist(RELS.DT.as.list)
+  # clean up the reference
+  rm(DTR)
+
+  # collapse it: (if not verbose, just return, else, collapse it and give feedback on it) 
+
+  if (! verbose)
+    return(rbindlist(lapply(RELS.DT.Names, get, envir=parent.frame())))
+
+
+  # else
+  nice <- function(x) (format(x, big.mark=","))
+  ret <- rbindlist(lapply(RELS.DT.Names, get, envir=parent.frame()))
+  counts <- ret[, list(Rels=nice(.N)), by=type]
+  cat("Relationships table created with a total of ", nice(nrow(ret)), "edges represented.\nBreakdown is as follows:\n\n")
+  print(counts)
+
+  return(ret)
 }
 
 

@@ -1,4 +1,4 @@
-xCreate Nodes & Relationships CSVs
+# Create Nodes & Relationships CSVs
 
 
 
@@ -25,9 +25,19 @@ SOURCEGRP <- "Concs"
 # ------------------------------------ #
 
 
-  # The value of the NODE.TYPES are what they node types are called in neo4j. 
-  # the names are the corresponding value of the column names in the data.table
-  NODE.TYPES <-  c(artist="artist", venue="venue", city="city", state="state", country="country")
+  # --------------------------------------------------------------------------- #
+  #                                                                             #
+  #  `NODE.TYPES` is a vector with the following setup:                         #
+  #      c( R.name = " neo4j.name ", ...  )                                     #
+  #                                                                             #
+  #  That is, the   name   of the element corresponds to the column name in R   #
+  #           the   value  of the element corresponds to the neo4j node type    #
+
+    NODE.TYPES <-  c(artist="artist", venue="venue", city="city", 
+                       state="state", country="country")
+  #                                                                             #
+  # --------------------------------------------------------------------------- #
+
 
   ID.prfx  <- c(artist="ART", venue="VEN", city="CITY", state="STATE", country="CNTRY")
   ID.digs  <- c(artist=6, venue=6, city=5, state=4, country=4)
@@ -48,28 +58,38 @@ SOURCEGRP <- "Concs"
   RELS.DT.Names      <- sapply(RELS.DT.Maker.list, function(R) do.call(mkDTRelName, as.list(c(R, SOURCEGRP))))
 
 # set to TRUE for debugging
-keep.s.e <- TRUE
+keep.names <- FALSE
 
-# DT.rel.artist.is_in.venue
-getRelationsWithinColumnByKey(CAmerged, "artist", "played_with", by=c("concertID", "concertDate"), sourceGrp=SOURCEGRP, keep.s.e=keep.s.e)
+# DT.Rel.Concs.artist.played_with.artist
+getRelationsWithinColumnByKey(CAmerged, "artist", "played_with", by=c("concertID", "concertDate"), sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
 
-# DT.rel.artist.is_in.venue
-getRelationsFromRows(CAmerged, "artist", "played_at", "venue", sourceGrp=SOURCEGRP, include=list("concertID", "concertDate"), keep.s.e=keep.s.e)
+# DT.Rel.Concs.artist.played_at.venue
+getRelationsFromRows(CAmerged, "artist", "played_at", "venue", sourceGrp=SOURCEGRP, include=list("concertID", "concertDate"), keep.names=keep.names, verbose=TRUE)
 
-# DT.rel.venue.is_in.city
-getRelationsFromRows(CAVenueGeo, "venue", "is_in", "city", sourceGrp=SOURCEGRP, add=list(source="Concs"), keep.s.e=keep.s.e)
+# DT.Rel.Concs.venue.is_in.city
+getRelationsFromRows(CAVenueGeo, "venue", "is_in", "city", sourceGrp=SOURCEGRP, add=list(source="Concs"), keep.names=keep.names, verbose=TRUE)
 
-# DT.rel.city.is_in.state
-getRelationsFromRows(CAVenueGeo, "city", "is_in", "state", sourceGrp=SOURCEGRP, keep.s.e=keep.s.e)
+# DT.Rel.Concs.city.is_in.state
+getRelationsFromRows(CAVenueGeo, "city", "is_in", "state", sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
 
-# DT.rel.state.is_in.country
-getRelationsFromRows(CAVenueGeo, "state", "is_in", "country", sourceGrp=SOURCEGRP, keep.s.e=keep.s.e)
+# DT.Rel.Concs.state.is_in.country
+getRelationsFromRows(CAVenueGeo, "state", "is_in", "country", sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
 
 # ------------------------------------------------------- #
 
-  # CREATE SINGLE NODE TABLE
+
+  # --------------------------------------------------- #
+  #                                                     #
+  #%%           THESE ARE THE FINAL TABLES            %%#
+  #                                                     #
+  # --------------------------------------------------- #
+
+
+  # COLLAPSE THE MULTIPLE DT's INTO A SINGLE NODES TABLE & A SINGLE RELS TABLE
   NODES.DT <- do.call(rbind, lapply(mkDTNodesName(names(NODE.TYPES), SOURCEGRP), get))
-  RELS.DT  <- combineRelDTs(RELS.DT.Names)
+  RELS.DT  <- combineRelDTs(RELS.DT.Names, verbose=TRUE)
+
+
     
   dir.create(as.path(dataDir, "neoForImport"))
   fileOut.nodes <- as.path(dataDir, "neoForImport", "nodes.csv")
