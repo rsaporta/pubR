@@ -78,17 +78,20 @@ getRelationsFromRows(CAVenueGeo, "state", "is_in", "country", sourceGrp=SOURCEGR
 # ------------------------------------------------------- #
 
 
-  # --------------------------------------------------- #
-  #                                                     #
-  #%%           THESE ARE THE FINAL TABLES            %%#
-  #                                                     #
-  # --------------------------------------------------- #
+  # -------------------------------------------------------------------------------------------- #
+  #                                                                                              #
+  #                                  THESE ARE THE FINAL TABLES                                  #
 
 
-  # COLLAPSE THE MULTIPLE DT's INTO A SINGLE NODES TABLE & A SINGLE RELS TABLE
-  NODES.DT <- do.call(rbind, lapply(mkDTNodesName(names(NODE.TYPES), SOURCEGRP), get))
-  RELS.DT  <- combineRelDTs(RELS.DT.Names, verbose=TRUE)
+        # COLLAPSE THE MULTIPLE DT's INTO A SINGLE NODES TABLE & A SINGLE RELS TABLE
+        # ---------------------------------------------------------------------------------- #
+          NODES.DT <- do.call(rbind, lapply(mkDTNodesName(names(NODE.TYPES), SOURCEGRP), get))  
+          RELS.DT  <- combineRelDTs(RELS.DT.Names, verbose=TRUE)
+        #                                                                                    #
+        # ---------------------------------------------------------------------------------- #
 
+  #                                                                                              #
+  # -------------------------------------------------------------------------------------------- #
 
     
   dir.create(as.path(dataDir, "neoForImport"))
