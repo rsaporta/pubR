@@ -56,25 +56,42 @@
 # --------------------------------------------------------------------------- #
 
 
+## EG: 
+#  output <- batchCreateNodesAndRels(NODES.DT, RELS.DT)
+
+
                                                         # these other arguments are less important right now. 
-batchCreateNodesAndRels <- function(NodesDT, RelsDT,   nodes.idcol="node", addSerialNumberToRels=TRUE) { 
+batchCreateNodesAndRels <- function(NodesDT, RelsDT,  nodes.idcol="node", addSerialNumberToRels=TRUE, verbose=TRUE, stream=FALSE) { 
 # TODO:  Explore passing the name of the DT. Will this save efficiency (memory or time)?
 
 
-  if (addSerialNumberToRels & is.data.table(RelsDT)) { 
+  if (addSerialNumberToRels && is.data.table(RelsDT)) { 
     maxNode <- max(NodesDT$node)
     # round up to the next power of ten
-    starting.serial <- round(maxNode, -ceiling(log(maxNode, 10)))
+    starting.serial <- 10 ^ ceiling(log(maxNode, 10))
     RelsDT[, rel.id := (1:.N) + starting.serial]
   }
 
-  content.nodes <- batchMethodsForNodes(NodesDT, idcol=nodes.idcol)
-  content.rels  <- batchMethodsForRels(RelsDT)
+  content.nodes <- batchMethodsForNodes(NodesDT, idcol=nodes.idcol, verbose=verbose)
+  content.rels  <- batchMethodsForRels(RelsDT, verbose=verbose)
+
+  # verbose output for troubleshooting
+  if (verbose) {
+    cat(rep("#", 55), sep="")
+    cat("\n\t\tFirst 10 JSON contents for nodes: \n", "   ", rep("-", 45), "\n", sep="")
+    print(head(content.nodes, 10))
+    cat("\n\t\tFirst 10 JSON contents for rels: \n", "   ", rep("-", 45), "\n", sep="")
+    print(head(content.nodes, 10))
+    cat(rep("#", 55), sep="")
+  }
+
 
   # note:  collapse if c(..), else use sep
   content <- paste0("[", paste(c(content.nodes, content.rels), collapse=", "), "]" )
 
-  H.post  <- getURL(u.batch, httpheader = jsonHeader, postfields = content)
+  streaming <- setNames(ifelse(stream, streamOn, streamOff), "X-Stream")
+
+  H.post  <- getURL(u.batch, httpheader = c(jsonHeader, streamOn), postfields = content)
 
   # incase user forgot to assign the output to an object, we dont want the handle to just dissappear. 
   if (saveToGlobal) {
@@ -89,13 +106,16 @@ batchCreateNodesAndRels <- function(NodesDT, RelsDT,   nodes.idcol="node", addSe
 
 
 
-batchMethodsForNodes <- function(DT, idcol="node") {
+batchMethodsForNodes <- function(DT, idcol="node", verbose=FALSE) {
 ## TODO: have a sepearte method for data.frame / data.table.  Different syntax
 ## TODO:  Error check the arguments and whats expected
 
   # allows for names of the DT to be passed instead of the whole object
   if (is.character(DT))
     DT <- get(DT)
+
+  if (verbose)
+    cat("\nCreating Nodes 'content'. \n")
 
 
   # confirm idcol is in the names of DT. 
@@ -107,17 +127,21 @@ batchMethodsForNodes <- function(DT, idcol="node") {
   }
 
   # return
-  apply(DT.arts, 1, function(x) 
+  apply(DT, 1, function(x) 
             toJSON(list(method="POST", to="/node", 
                body=as.list(x[-idcol.idx]), id=as.numeric(x[idcol.idx])  ))   )
 }
 
 
-batchMethodsForRels <- function(DT)  {
+batchMethodsForRels <- function(DT, verbose=FALSE)  {
 
   # allows for names of the DT to be passed instead of the whole object
   if (is.character(DT))
     DT <- get(DT)
+
+  if (verbose)
+    cat("\nCreating Rels 'content'. \n")
+
 
   dataCols <- setdiff(names(DT), c("start", "end", "rel.id", "type"))
 
@@ -140,6 +164,20 @@ batchMethodsForRels <- function(DT)  {
 }
 
 
+#  # if it fails, the whole thing fails, thus lets break it down. 
+#  chopUpDTNodesAndRels <- function(NodesDT, RelsDT, howManyChops=10, nodes.idcol="node") {
+#  
+#    rowsPerChop <- ceiling(nrow(NodesDT) / howManyChops)
+#    chopGroup   <- rep(seq(howManyChops), each=rowsPerChop) [1:nrow(NodesDT)]
+#  
+#    NodesDT[, .chopGrp := chopGroup]
+#    NodesDT.list <- lapply(seq(howManyChops), function(i) NodesDT[.chopGrp==i, .SD, .SDcols=setdiff(names(NodesDT), ".chopGrp")])
+#  
+#    # lapply(NodesDT.list, RelsDT[....   <FAIL> one node can relte to multiple parts in the table ] )
+#    #                               < we can ensure that ther eare no rows from RelsDT that dont 
+#  
+#    return("You shouldnt use this function. It doesnt make sense.")
+#  }
 
 
 

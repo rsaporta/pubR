@@ -176,7 +176,7 @@ isErr <- function(expression)  {
   #    T if expression throws an Error // F if expression is evaluated without error
   #    NOTE:  The actual evaluation of the expression is NOT RETURNED
   
-	return( inherits(try(eval(expression), silent=T), "try-error") )
+  return( inherits(try(eval(expression), silent=T), "try-error") )
 }
 
 isNumber <- function(x)  {
@@ -903,35 +903,35 @@ makeDictWithIntegerKeys <- function(KVraw, applyLabels=TRUE)  {
   
   
 chkp <-chkpt <- function(logStr, chkpOn=TRUE, final=FALSE) {
- 	# Logs the string to the console for checkpointing & troubleshooting
- 	# Args:
- 	#	logStr:  a string that will be logged to stdout
- 	#	chkpOn:	 If FALSE, then logging does not occur. (for quickly turning chkp on/off)
- 	# 
- 	# Returns Null
- 	
- 	if (chkpOn) {
- 		if (nchar(logStr)<3)
- 			logStr <- paste0("\t\t  ",logStr)
- 		else if (nchar(logStr)<12)
- 			logStr <- paste0("\t\t",logStr)
- 		else if (nchar(logStr)<15)
- 			logStr <- paste0("\t",logStr)
- 		else if (nchar(logStr)<17)
- 			logStr <- paste0("  ",logStr)
-		else if (nchar(logStr)<20)
- 			logStr <- paste0(" ",logStr)
+  # Logs the string to the console for checkpointing & troubleshooting
+  # Args:
+  # logStr:  a string that will be logged to stdout
+  # chkpOn:  If FALSE, then logging does not occur. (for quickly turning chkp on/off)
+  # 
+  # Returns Null
+  
+  if (chkpOn) {
+    if (nchar(logStr)<3)
+      logStr <- paste0("\t\t  ",logStr)
+    else if (nchar(logStr)<12)
+      logStr <- paste0("\t\t",logStr)
+    else if (nchar(logStr)<15)
+      logStr <- paste0("\t",logStr)
+    else if (nchar(logStr)<17)
+      logStr <- paste0("  ",logStr)
+    else if (nchar(logStr)<20)
+      logStr <- paste0(" ",logStr)
 
-		#log
- 		cat(paste0("\t\t",
- 				  ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
- 	}
- 	
- 	if (final) {
- 		cat("\n\n")  #for cleanliness
- 	}
+    #log
+    cat(paste0("\t\t",
+          ")*(   checkpoint   )*(","\n\t\t",logStr,"\n", collapse=""))
+  }
+  
+  if (final) {
+    cat("\n\n")  #for cleanliness
+  }
 
- 	return()
+  return()
 }
 
  
@@ -2697,10 +2697,28 @@ mkdshr <- function(x=clipPaste(), space=TRUE, pound="#", dash="-", leftSpace=TRU
     top <- TRUE
   }
 
+  # remove ending spaces 
   x <- gsub("\\n$", "", x)
   x <- gsub("\\\\n*", "", x)
-  regs <- regexpr(pattern="\\s(\\s)+", x)
-  right <- revString(substr(x, 1, regs + attr(regs, "match.length") - 1))
+
+  # serach for pre-pound, which can be pound or "#%%"
+  prePound <- regexpr(pattern=paste0(pound, "%*"), x)
+
+  # find the first gap that is larger than a single space
+  regs <- gregexpr(pattern="\\s(\\s)+", x)[[1]]
+
+  # check that there is a space after the prePound. 
+  isThereAPrePound <- any(regs > prePound) & !all(regs < prePound)
+
+  # use the regs which is _after_ any starting pounds
+  leftSideBuffer <- ""
+  if (isThereAPrePound) {
+    leftSideBuffer <- substr(x, 1, prePound[1] - 1)
+    x <- substr(x, prePound[1], nchar(x))
+    regs <- gregexpr(pattern="\\s(\\s)+", x)[[1]]
+  }
+
+  right <- revString(substr(x, 1, regs[use] + attr(regs, "match.length")[use] - 1))
 
   x <- mkdsh(x=paste0(x, right), space=space, pound=pound, dash=" ", leftSpace=leftSpace, includeInput=TRUE )
   x <- mkdsh(x, space=space, pound=pound, dash=dash, leftSpace=leftSpace, includeInput=includeInput )
@@ -2710,9 +2728,17 @@ mkdshr <- function(x=clipPaste(), space=TRUE, pound="#", dash="-", leftSpace=TRU
     x <- paste(paste(lines, collapse="\n"), x, sep="\n")
   }
 
+  # add back any bugger in place before the `pound`  
+  x <- gsub("\n", paste0("\n", leftSideBuffer), x)
+  x <- paste0(leftSideBuffer, x)
+
   clipCopy(x)
   return(invisible(x))
 }
+
+mr <- function(...)
+  mkdshr(..., top=TRUE)
+
 
 mkdsh <- function(x=clipPaste(), space=TRUE, pound="#", dash="-", leftSpace=TRUE, includeInput=TRUE) { 
 # pound:  turn off by making it FALSE or making it ""
@@ -2766,6 +2792,8 @@ mkdsh <- function(x=clipPaste(), space=TRUE, pound="#", dash="-", leftSpace=TRUE
   return(invisible(dashes))
 }
 
+
+
 dtWideToLong <- function(DT, cols=names(DT), cnames=c("Name", "Value")) { 
   copy(setnames(DT[, list(Name=rep(names(.SD), each=nrow(DT)), Value=unlist(.SD)), .SDcols=cols], cnames))
 }
@@ -2778,3 +2806,40 @@ knito <- function(input, output=gsub("src", "out", dirname(input)), encoding="UT
   dir.create(dirname(output))  
   knit(input=input, output=output, encoding=encoding, ...)
 }
+
+
+
+mbench <- function(..., maxSeconds=20, maxReps=200L, verbose=TRUE) { 
+# aka benchPrep
+  
+  require(microbenchmark)
+  
+  dots <- list(...)
+
+  ## Grab names, add to dots
+  mc <- match.call()
+  nms <- as.character(mc[(1:length(dots))+1])
+
+  setNames(dots, nms)
+
+  if(! all(sapply(dots, is.call)) )
+    stop("All arguments must be quoted calls")
+
+  times.matrix.single.run <- sapply(dots, function(x) system.time(eval(x)))
+
+  user.times.single.run <- times.matrix.single.run["user.self", ]
+
+  summed.run.time <- sum(user.times.single.run)
+
+  reps <- min(as.integer(floor(maxSeconds / summed.run.time)),  maxReps)
+
+  if (verbose) {
+    cat("Times for a singe run are: \n")
+    print(data.frame(t(user.times.single.run)))
+    cat("\n\tMicrobenchmark will run", reps, "reps")
+    cat("\n\n\n")
+  }
+
+  return(microbenchmark(list=dots, times=reps))
+}
+

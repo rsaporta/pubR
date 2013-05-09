@@ -45,8 +45,9 @@ u.batch  <- as.path(u.base, "batch")
 
 
 # options for CURL
-jsonHeader = c("Content-Type" = "application/json", "Accept" = "application/json")
-
+jsonHeader <- c("Content-Type" = "application/json", "Accept" = "application/json")
+streamOn   <- c("X-Stream" = "true")
+streamOff  <- c("X-Stream" = "false")  # this is the value by defaault, I dont think there will be much need to use this explicitly
 
 
 # ------------------------------------------- #
@@ -200,7 +201,7 @@ parseNumberFromOutput <- function(U) {
 ##  THE FOLLOWING FUNCTION DELETES ALL NODES
 ##  There is a safety bool that must be set to TRUE in order for the delete to occur
 deleteALL.allowed <- FALSE
-deleteAllNodes <- function()  { 
+deleteAllNodes <- function(verbose=TRUE)  { 
 # this is handy when setting things up. 
 
   if (!deleteALL.allowed) {
@@ -219,7 +220,7 @@ deleteAllNodes <- function()  {
         return(TRUE)
       }
 
-      ret   <- apply(Nodes, 1, deleteNode, force=TRUE)
+      ret   <- apply(Nodes, 1, deleteNode, force=TRUE, verbose=verbose)
       return(all(ret))
   } 
 

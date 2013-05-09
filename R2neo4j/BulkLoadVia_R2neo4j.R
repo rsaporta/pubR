@@ -7,7 +7,8 @@
 
         this file is just Ricks scrap work. 
 
-        You probably want one of the other files. 
+        You probably want one of the other files, 
+            such as:   batchCreateFromDT.R
 
 
 
@@ -27,3 +28,8 @@
   
 
 output <- batchCreateNodesAndRels(NODES.DT, RELS.DT, nodes.idcol="node", addSerialNumberToRels=TRUE) 
+
+
+
+# Trouble shooting. 
+# output <- batchCreateNodesAndRels(N.mini, R.mini, nodes.idcol="node", addSerialNumberToRels=TRUE) 
