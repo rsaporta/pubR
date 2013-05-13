@@ -1,74 +1,89 @@
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+#  
+#  ### USAGE: 
+#  
+#  ## data.frame
+#    set.seed(1)
+#    DF <- data.frame("ID"=sample(LETTERS[1:7], 120, TRUE), "SERIES" = sample(seq(1000, 9999, 200), 120, TRUE), replicate(12, round(rnorm(120), 3)) )
+#  
+#    # simple call
+#    reproduce(DF)
+#    
+#  
+#    # notice the difference between `head` and `rows` (see the last few rows in the sample)
+#    reproduce(DF, head=12)
+#    reproduce(DF, rows=12)
+#  
+#    reproduce(DF, rows=12, shuffle=TRUE)
+#  
+#  
+#    # sample by column name
+#    reproduce(DF, cols=c("ID", "X4", "X10"))
+#  
+#    # sample by column number. (a single number is interpreted via `seq(cols)` )
+#    reproduce(DF, cols=c(1, 6, 12))
+#    reproduce(DF, cols=6)
+#  
+#    # `head` and `shuffle` apply only to rows, not to columns
+#    reproduce(DF, cols=4, rows=3)
+#    reproduce(DF, cols=4, head=3)
+#    reproduce(DF, cols=4, shuffle=TRUE)
+#  
+#    # `head` superscedes `shuffle` and `rows``
+#    reproduce(DF, cols=4, head=3, rows=100, shuffle=TRUE)  
+#    reproduce(DF, cols=4, rows=3, shuffle=TRUE)  
+#  
+#  
+#    # if the whole object is desired, shortcut call: 
+#    reproduce(DF, whole)
+#    reproduce(DF, whole=TRUE)
+#    identical(reproduce(DF, whole), reproduce(DF, whole=TRUE))
+#  
+#  ## data.table
+#    DT <- data.table(DF, key=c("ID", "SERIES"))
+#  
+#    # notice that with data.table, the row numbers apply to the sample, not to the original source. 
+#    # However, examine the values of ID and SERIES and observe they are different. 
+#    reproduce(DT, head=12)
+#    reproduce(DT, rows=12)
+#    reproduce(DT, rows=12, shuffle=TRUE)
+#  
+#  
+#    reproduce(DT, rows=12, shuffle=TRUE)
+#    reproduce(DT, cols=4, rows=12, shuffle=TRUE)
+#  
+#    # head takes priority
+#    reproduce(DT, cols=4, rows=12, head=7, shuffle=TRUE)
+#  
+#  
+#  ## OTHER DATA TYPES
+#  
+#  ## lists
+#    myList <- list(x=1:5, "hello", "Abc", 1:7, c("a", "b", "c"), c("last", "element", "in", "the", "list"))
+#    reproduce(myList)
+#  
+#    reproduce(myList, 2)
+#  
+#    # Shuffle not implemented on lists.  Instead use sample
+#    set.seed(7)
+#    reproduce(myList, 2, shuffle=TRUE)
+#    reproduce(sample(myList, 2), 7, head=5,  name="myList")
+#  
+#
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
 
-### USAGE: 
-
-## data.frame
-  set.seed(1)
-  DF <- data.frame("ID"=sample(LETTERS[1:7], 120, TRUE), "SERIES" = sample(seq(1000, 9999, 200), 120, TRUE), replicate(12, round(rnorm(120), 3)) )
-
-  # simple call
-  reproduce(DF)
-  
-
-  # notice the difference between `head` and `rows` (see the last few rows in the sample)
-  reproduce(DF, head=12)
-  reproduce(DF, rows=12)
-
-  reproduce(DF, rows=12, shuffle=TRUE)
 
 
-  # sample by column name
-  reproduce(DF, cols=c("ID", "X4", "X10"))
 
-  # sample by column number. (a single number is interpreted via `seq(cols)` )
-  reproduce(DF, cols=c(1, 6, 12))
-  reproduce(DF, cols=6)
-
-  # `head` and `shuffle` apply only to rows, not to columns
-  reproduce(DF, cols=4, rows=3)
-  reproduce(DF, cols=4, head=3)
-  reproduce(DF, cols=4, shuffle=TRUE)
-
-  # `head` superscedes `shuffle` and `rows``
-  reproduce(DF, cols=4, head=3, rows=100, shuffle=TRUE)  
-  reproduce(DF, cols=4, rows=3, shuffle=TRUE)  
+# ---------------------------------------------------------- #
+#                                                            #
+#                    FUNCTIONS START HERE                    #
+#                                                            #
+# ---------------------------------------------------------- #
 
 
-  # if the whole object is desired, shortcut call: 
-  reproduce(DF, whole)
-  reproduce(DF, whole=TRUE)
-  identical(reproduce(DF, whole), reproduce(DF, whole=TRUE))
 
-## data.table
-  DT <- data.table(DF, key=c("ID", "SERIES"))
-
-  # notice that with data.table, the row numbers apply to the sample, not to the original source. 
-  # However, examine the values of ID and SERIES and observe they are different. 
-  reproduce(DT, head=12)
-  reproduce(DT, rows=12)
-  reproduce(DT, rows=12, shuffle=TRUE)
-
-
-  reproduce(DT, rows=12, shuffle=TRUE)
-  reproduce(DT, cols=4, rows=12, shuffle=TRUE)
-
-  # head takes priority
-  reproduce(DT, cols=4, rows=12, head=7, shuffle=TRUE)
-
-
-## OTHER DATA TYPES
-
-## lists
-  myList <- list(x=1:5, "hello", "Abc", 1:7, c("a", "b", "c"), c("last", "element", "in", "the", "list"))
-  reproduce(myList)
-
-  reproduce(myList, 2)
-
-  # Shuffle not implemented on lists.  Instead use sample
-  set.seed(7)
-  reproduce(myList, 2, shuffle=TRUE)
-  reproduce(sample(myList, 2), 7, head=5,  name="myList")
-
-  
 
 ## You can copy and paste the output, or if on a mac, you can 
 ## If on a Mac, hit CMD+V in any editing window. 
@@ -156,7 +171,7 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
 
     # grab the key if there is one, so as to preserve it in the output
     k  <- key(x)
-    ky <- ifelse(is.null(x), "", paste0(", key='", paste(k, collapse=","), "'") )
+    ky <- ifelse(""==key(x), "", paste0(", key='", paste(k, collapse=","), "'") )
 
     # remove the pointer
     pattern <- ", .internal.selfref = <pointer: .*>"
