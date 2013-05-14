@@ -85,10 +85,16 @@
 
 
 
-## You can copy and paste the output, or if on a mac, you can 
-## If on a Mac, hit CMD+V in any editing window. 
+## You can copy and paste the output, or 
+## if on  Mac OS X, the output will be automaticall copied to the clipboard 
+##    ie, just run the function, then hit CMD+v  in your text editor or website.
 
 reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE, shuffle=FALSE, name=NA, verbose=!silent, silent=FALSE, pos=1) { 
+# If rows is a single number, then that is *how many* rows will be selected
+# If rows is a vector of numbers, then that is *which rows* will be selected
+# Same for cols.  Note, vlaue can be integer or character
+#
+# This function is data.table aware in that it handles data.table differently from data.frame
 
   # grab the name of x from the previous env. 
   mc <- match.call()
@@ -116,22 +122,38 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
   #  we will take only a sampling
   if (!whole  && length(d)) {
 
-    if (!missing(head) & !is.na(head)) {
+    if (!missing(head) & !is.na(head) & missing(rows)) {
       x <- x[1:(min(nrow(x), head)), ]
-    } else if (d[[1]] > rows) {
-      # Sample randomly
-      if (shuffle) { 
-        x <- x[sample(nrow(x), rows, FALSE), ]
+    } else if (length(rows) || d[[1]] > rows) {
+      # check for human error
+      if (!missing(head))
+        warning("Both `head` and `rows` has been selected. `head` will be ignored, only `rows` used.")
+      
+      # if rows has length, then select those specific rows
+      if (length(rows) > 1) {
+          # make sure that rows are all present in x
+          if(is.character(rows))
+            rows <- setdiff(rows, names(x))
+          if (is.numeric(rows))
+            rows <- rows[rows <= d[[1]]]
+          x <- x[rows, ]
+
+      # rows is a single number, and that is how many rows to select.
       } else {
-        he <- ceiling(rows * 0.62)
-        tl <- rows - he
-        x  <- x[c(1:he, 1+d[[1]]-(tl:1)), ]
+        # Sample randomly
+        if (shuffle) { 
+          x <- x[sample(nrow(x), rows, FALSE), ]
+        } else {
+          he <- ceiling(rows * 0.62)
+          tl <- rows - he
+          x  <- x[c(1:he, 1+d[[1]]-(tl:1)), ]
+        }
       }
     }
   }
 
-  # select only certian columns
-  if (!missing(cols) && !is.na(cols)) {
+  # select only certian columns, assuming cols specified and x has dimension
+  if (!missing(cols) && !is.na(cols) & length(d)) {
     if (is.numeric(cols) && length(cols)==1) {
 
       if (cols > d[[2]])
@@ -157,7 +179,31 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
     if (!missing(head)) {
       x <- x[seq(min(L, head))]
     } else if (!missing(rows)) {
-      x <- x[seq(min(L, rows))]
+
+      # if rows has length, then take those specific elements
+      if (length(rows)) {
+        # make sure that "rows" are all present in x            
+        if(is.character(rows))
+          rows <- setdiff(rows, names(x))
+        if (is.numeric(rows))
+          rows <- rows[rows <= L]
+        # then sample
+        x <- x[rows]
+
+      # .. otherwise take the first rows-many elements
+      } else {
+        rows <- min(rows, L) # make sure rows does not exceed length(x)
+        # Sample randomly
+        if (shuffle) { 
+          x <- x[sample(L, rows, FALSE), ]
+        # sample head and tail
+        } else {
+          he <- ceiling(rows * 0.62)
+          tl <- rows - he
+          x  <- x[c(1:he, (L+1)-(tl:1)), ]
+        }
+      }
+
     }
   }
 
@@ -194,9 +240,10 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
     print(x, quote=FALSE)
     cat("\n\n")
 
-    ln <- function() cat("    ==X", rep("=", 61), "X==\n", sep="")
+    ln <- function() cat("    ==X", rep("=", 62), "X==\n", sep="")
     ln()
-    cat("       This is copy+paste'able. (If on a Mac, it is already copied)\n") 
+    cat({if (clipboard) "" else rep(" ", 18)}, sep="")
+    cat("         Copy+Paste this part.", ifelse(clipboard, "(If on a Mac, it is already copied!)\n", "\n")) 
     ln()
     cat("\n", ret, "\n\n")
     ln()
