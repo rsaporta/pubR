@@ -14,11 +14,24 @@
 #-----------------------------------------------------------------#
 
 
-printFunctList <- function(fnlist, pre="# ") {
-  cls()
-  if (inherits(fnlist, "file") || (length(f)==1 && grepl("\\.[rR]$", fnlist)))
+printFunctList <- function(fnlist, pre="  # ", copy=TRUE) {
+
+  # defaults to utils file
+  if (missing(fnlist)) 
+    fnlist <- path.expand("~/git/misc/rscripts/utilsRS.r")
+  if (inherits(fnlist, "file") || (length(fnlist)==1 && grepl("\\.[rR]$", fnlist)))
     fnlist <- findFnsInFile(fnlist)  
-  cat("\n", paste(pre, fnlist, "\n"), "\n")
+
+  # output
+  out <- paste(pre, fnlist, collapse="\n")
+
+  # copy to clipboard
+  if (copy & exists("mkdshr"))
+    mkdshr(out)
+
+  # print to screen
+  cls()
+  cat("\n", out, "\n", sep="")
 }
 
 #------------

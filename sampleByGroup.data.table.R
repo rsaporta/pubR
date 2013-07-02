@@ -17,7 +17,7 @@ sampleByGroup <- function(DT, group=key(DT), perc=0.66, replace=FALSE, size=NA, 
   #-----------------------------------#
   # check for propper input  (pt 1)
   #-----------------------------------#
-    # cannot use both size and perc. 
+    # cannot use both size and perc
     if (!missing(size) && !missing(perc) && !is.na(size))
       warning("Only one of `perc` and `size` can be used. Defaulting to `perc`.")
 

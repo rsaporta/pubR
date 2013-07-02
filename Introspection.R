@@ -28,7 +28,7 @@ iam <- c(
         character= is.character(obj), 
         object= is.object(obj), 
 
-        formula= is.formula(obj), 
+#        formula= is.formula(obj), 
         call= is.call(obj), 
         language= is.language(obj), 
         symbol= is.symbol(obj), 
