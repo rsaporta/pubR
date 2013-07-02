@@ -111,18 +111,30 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
 
 
   # allows for the call `reproduce(x, whole)` and setting whole to TRUE and rows to default. 
-  w <- if(length(mc) >2) as.character(mc[[3]]) else (NA)
-  if (!is.na(w) && (tolower(w)=="whole" || tolower(w)=="hole")){
+  w <- tolower(if(length(mc) >2) as.character(mc[[3]]) else (NA))
+  if (!is.na(w) && (w=="whole" || w=="hole" || w=="all")){
     whole <- TRUE
     rows  <- 10
   }
+
+  # check that rows & cols do not exceed the dims.  If so, scale them back
+  #------------------------
+    # check that x has dim
+    if (!is.null(d)) {
+      # check if `rows` exceeds rows(x)
+      if (rows > d[[1]])
+        rows <- d[[1]]
+      # check if x has cols, and `cols` has been set and `cols` exceeds cols(x)
+      if (length(d) > 1 && !is.na(cols) && cols > d[[2]])
+        cols <- d[[2]]
+    }
 
   ## SAMPLE THE ROWS
   # if x has dimension && user did not flag for the whole thing
   #  we will take only a sampling
   if (!whole  && length(d)) {
 
-    if (!missing(head) & !is.na(head) & missing(rows)) {
+    if (!missing(head) && !is.na(head) && missing(rows)) {
       x <- x[1:(min(nrow(x), head)), ]
     } else if (length(rows) || d[[1]] > rows) {
       # check for human error
@@ -143,6 +155,12 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
         # Sample randomly
         if (shuffle) { 
           x <- x[sample(nrow(x), rows, FALSE), ]
+        
+        # rows of 1 or 2 messes up the arithmetic equation being used as an index 
+        } else if (rows < 3) { 
+          x <- x[1:rows, ]
+
+        # If not shuffling, use 60% of the value of rows to grab from the head and the remaing rows to come form the tail
         } else {
           he <- ceiling(rows * 0.62)
           tl <- rows - he
@@ -217,7 +235,8 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
 
     # grab the key if there is one, so as to preserve it in the output
     k  <- key(x)
-    ky <- ifelse(""==key(x), "", paste0(", key='", paste(k, collapse=","), "'") )
+    ky <- if (is.null(k)) "" else paste0(", key='", paste(k, collapse=","), "'")
+
 
     # remove the pointer
     pattern <- ", .internal.selfref = <pointer: .*>"
