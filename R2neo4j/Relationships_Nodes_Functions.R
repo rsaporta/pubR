@@ -82,12 +82,16 @@ getRelationsWithinColumnByKey <- function(sourceDT, start.col, relation, by=list
                                       , sourceGrp=character(), selfRelate=FALSE, keep.names=FALSE
                                       , insertSourceAsCol=nchar(sourceGrp), pos=1, verbose=FALSE) {
   
+  # We will insert source as col if sourceGrp provided
   if (length(sourceGrp) && insertSourceAsCol)
     additional <- c(additional, "source"=sourceGrp)
 
+  # Create the name of the new DT where current iteration will be assigned. eg: "DT.Rel.Concs.artist.played_with.artist"
   DT.nm <- mkDTRelName(start.col, relation, start.col, sourceGrp)
-  # DT.nm <- paste("DT.rel", start.col, relation, start.col, sep=".") 
-  cols  <- unlist(c(start.col, end.col, by))
+
+  # cols is... ?    TODO:    I had `end.col` in here.  It may have been a mistake from 'getRelationsFromRows()' since here the start & end cols are the same
+  cols  <- unlist(c(start.col, by))   # Previously:  cols  <- unlist(c(start.col, end.col, by))
+  # clean up any blanks from cols
   cols  <- cols[!is.na(cols) & cols != ""]
 
   # -------------------------------------------------- #
@@ -112,13 +116,17 @@ getRelationsWithinColumnByKey <- function(sourceDT, start.col, relation, by=list
         list(start.nm=as.character(e.g$start[indx]), end.nm=as.character(e.g$end[indx])) 
        }, by=by]
    ))
+
+  # Re-assign start.col & end.col, now that the DT has been created. 
+  #  first get the corresponding DT name
+  nameOfDT.Nodes <-  mkDTNodesName(start.col, sourceGrp)
   start.col <- "start.nm"
-  end.col <- "end.nm"
+  end.col   <- "end.nm"
 
 
   completeRelsDT( DT=get(DT.nm, envir=parent.frame(pos)) 
                  , start.col=start.col, end.col=end.col, sourceGrp=sourceGrp
-                 , keep.names=keep.names, additional=additional) 
+                 , keep.names=keep.names, additional=additional, nameOfDT.Nodes=nameOfDT.Nodes) 
 
   if (verbose) 
     msgCreatedTable(DT.nm)
@@ -132,7 +140,7 @@ getRelationsWithinColumnByKey <- function(sourceDT, start.col, relation, by=list
 
 
 
-completeRelsDT <- function(DT, start.col, end.col, sourceGrp, keep.names=FALSE, additional=NULL) { 
+completeRelsDT <- function(DT, start.col, end.col, sourceGrp, keep.names=FALSE, additional=NULL, nameOfDT.Nodes="") { 
 ## Once each relations data.table (regardless if column-wise or row-wise) is created, this function will 
 ##    then call the look-up-nodes funciton and then clean up the rest of the table
 
@@ -143,7 +151,7 @@ completeRelsDT <- function(DT, start.col, end.col, sourceGrp, keep.names=FALSE, 
     stop("`DT` should be a data.table or the name of a data.table")
 
   # Nodes: Add start & end nodes table and assign it to the name contained in DT.nm
-  getStartEndNodes(DT, start.col, end.col, sourceGrp=sourceGrp)
+  getStartEndNodes(DT, start.col, end.col, sourceGrp=sourceGrp, nameOfDT.Nodes=nameOfDT.Nodes)
 
   # add node type, ie, "relation"
   DT[, type := relation ]
@@ -177,7 +185,7 @@ completeRelsDT <- function(DT, start.col, end.col, sourceGrp, keep.names=FALSE, 
 # -------------------------------------------------------- #
 
 # -------------------------------------------------------- #
-getStartEndNodes <- function(DT, start.col, end.col, sourceGrp, selfRelate=FALSE, base="DT.Nodes")  {
+getStartEndNodes <- function(DT, start.col, end.col, sourceGrp, selfRelate=FALSE, base="DT.Nodes", nameOfDT.Nodes="")  {
 
   # some incoming DT's have been modified and might have column names different
   #   from what would be expected in typical  DT.source.XXXXX format. 
@@ -189,9 +197,17 @@ getStartEndNodes <- function(DT, start.col, end.col, sourceGrp, selfRelate=FALSE
   start.name <- ifelse( is.null(names(start.col)),  start.col, names(start.col) )
   end.name   <- ifelse( is.null(names(end.col)),    end.col,   names(end.col)   )  
 
-  start.DT.nm <- paste0(paste(base, sourceGrp, sep="."), ".", start.name) # the inner `paste` is to allow for an empty `sourceGrp` without causing extra dot
-  end.DT.nm   <- paste0(paste(base, sourceGrp, sep="."), ".", end.name  ) # the inner `paste` is to allow for an empty `sourceGrp` without causing extra dot
-
+  # check if `nameOfDT.Nodes` has been supplied
+  if (nchar(nameOfDT.Nodes) >= 1) {
+    start.DT.nm <- nameOfDT.Nodes
+    end.DT.nm   <- nameOfDT.Nodes
+  } else {
+    ## TODO  6-20-2013.  I think instead of this, we can use 
+    ##          <- mkDTNodesName(start.col, sourceGrp)  and end.col, equivallently. 
+    start.DT.nm <- paste0(paste(base, sourceGrp, sep="."), ".", start.name) # the inner `paste` is to allow for an empty `sourceGrp` without causing extra dot
+    end.DT.nm   <- paste0(paste(base, sourceGrp, sep="."), ".", end.name  ) # the inner `paste` is to allow for an empty `sourceGrp` without causing extra dot
+  }
+  
   # Add node id's
   setkeyv(DT, start.col)
   DT[get(start.DT.nm), start:=node]
@@ -325,10 +341,12 @@ convertColumnsToCharacter <- function(DT, convert=c("all", "factors", "numerics"
 
   createAllNodes <- function(sourceDT,  NODE.TYPES, ID.prfx, ID.digs, sourceGrp=character(), insertSourceAsCol=nchar(sourceGrp), pos=1  ) {
 
+    # We will insert source as col if sourceGrp provided
     if (length(sourceGrp) && insertSourceAsCol)
       insertSourceAsCol <- TRUE
 
-  
+    ## ITERATE OVER THE COLUMNS OF sourceDT
+    # recall that the names of NODE.TYPES correspond to the column names (in R) of the data.table  
     for (nt.nm in names(NODE.TYPES)) {
   
       # current node tracks the node index for the whole environment
@@ -337,7 +355,11 @@ convertColumnsToCharacter <- function(DT, convert=c("all", "factors", "numerics"
         ifelse(exists(".currentNode", envir=parent.frame(pos)), 
                   get(".currentNode", envir=parent.frame(pos)),  0) 
 
+      # Create the name of the new DT where current iteration will be assigned. eg: "DT.Nodes.Concs.artist"
       NameOfDT <- mkDTNodesName( NODE.TYPES[nt.nm], sourceGrp )    
+
+      ## tmp.DT is the DT that will be assigned.  
+      # begin by grabbing just the unique values of the current column
       tmp.DT   <- setkey(sourceDT[, list(name=as.character(unique(get(nt.nm))))], "name") 
 
       tmp.DT[ , id     := paste0(ID.prfx[nt.nm], fw0(1:.N, ID.digs[nt.nm])) ]

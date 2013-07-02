@@ -1,3 +1,10 @@
+## FILE NAME
+##      R2neo4j.r
+
+## ------------------------------------ ##
+##        FUNCTIONS IN THIS FILE        ##
+## ------------------------------------ ##
+
  #  getNode ( NODE.Number, JSON=TRUE ) 
  #  deleteNode ( NODE.Number, force=FALSE, verbose=TRUE ) 
  #  createNode ( properties=NULL, retJSON=TRUE ) 
@@ -24,56 +31,108 @@
 
 
 
-#  R2neo4j.r
-
-library(RCurl)
-library(rjson)
 
 
-# -------------------------------------------- #
-#                                              #
-#             URL's & CURL OPTIONS             #
-#                                              #
-# -------------------------------------------- #
+#------------------------------------------------------------------#
+#       PACKAGES                                                   #
+#------------------------------------------------------------------#
+  library("data.table")
+  library("RCurl")
+  library("rjson")
+#------------------------------------------------------------------#
 
 
-u.base   <- "http://localhost:7474/db/data/"
-u.cypher <- as.path(u.base, "cypher")
-u.node   <- as.path(u.base, "node")
-u.rel    <- as.path(u.base, "relationship")
-u.batch  <- as.path(u.base, "batch")
+
+#------------------------------------------------------------------#
+#       WORKSPACE SETUP                                            #
+#------------------------------------------------------------------#
+  # whether or not to backup objects
+  saving   <- TRUE
+
+  projName <- "R2neo4j"
+  setScience(project=projName, loadImage=FALSE)
+
+  # if flagged to TRUE, any loaded data will be deleted after no longer needed
+  cleanUpAfterOurselves <- TRUE
+
+  # which platform are we working on
+  .Pfm=Sys.info()[['sysname']]
+#------------------------------------------------------------------#
 
 
-# options for CURL
-jsonHeader <- c("Content-Type" = "application/json", "Accept" = "application/json")
-streamOn   <- c("X-Stream" = "true")
-streamOff  <- c("X-Stream" = "false")  # this is the value by defaault, I dont think there will be much need to use this explicitly
+#------------------------------------------------------------------#
+#       SOURCE HELPER FUNCS                                        #
+#------------------------------------------------------------------#  
+  # Load the main utils file
+  utilsFile <- ifelse(.Pfm=="Linux", "~/NBS-R/Ricks/src/utilsRS.r", "~/git/misc/rscripts/utilsRS.r")
+  invisible(source(utilsFile, local=FALSE, echo=FALSE))
+
+  # load the support utils files, including the NBS utils file if on the science box
+  utilSource(main=FALSE)
+  
+  # laod the support functions speciic to NBS 
+  sourceEntireFolder(as.path(srcDir, "../supportFns"))
+
+  # Add DC to the built in data set for state names & abbrevs. 
+  if (length(state.name) == 50 && length(state.abb) == 50) {
+    state.name <- unique(c(state.name, "Washington DC")) 
+    state.abb  <- unique(c(state.abb,  "DC"))
+  }
+
+  s.t <- system.time
+#------------------------------------------------------------------#  
 
 
-# ------------------------------------------- #
-#                                             #
-#              WRAPPER FUNCTIONS              #
-#                                             #
-# ------------------------------------------- #
+
+#------------------------------------------------------------------#
+#       PARAMETERS                                                 #
+#------------------------------------------------------------------#
+
+  # This is a minor safety switch. It must be set to TRUE in order for the deletion of all nodes to be executed. 
+  deleteALL.allowed <- FALSE
+
+  # URL's & CURL OPTIONS
+  u.base   <- "http://localhost:7474/db/data/"
+  u.cypher <- as.path(u.base, "cypher")
+  u.node   <- as.path(u.base, "node")
+  u.rel    <- as.path(u.base, "relationship")
+  u.batch  <- as.path(u.base, "batch")
+
+  # options for CURL
+  jsonHeader <- c("Content-Type" = "application/json", "Accept" = "application/json")
+  streamOn   <- c("X-Stream" = "true")
+  streamOff  <- c("X-Stream" = "false")  # this is the value by defaault, I dont think there will be much need to use this explicitly
+#------------------------------------------------------------------#
 
 
-JU <- function(URL) { 
-# Wrapper for fromJSON + getURL
-  fromJSON(getURL(URL))
-}
 
-JR <- function(raw) { 
-  fromJSON(rawToChar(raw))
-}
 
-getNode <- function(NODE.Number, JSON=TRUE) { 
-# Wrapper for getting node from api
-  html <- getURL(as.path(u.node, NODE.Number))
 
-  if (JSON)
-    return(fromJSON(html))
-  return(html)
-}
+#------------------------------------------------------------------#
+#       BASIC WRAPPER FUNCTIONS (because typing is for suckers)    #
+#------------------------------------------------------------------#
+  # The purpose of these functions is to make `lapply(..)` calls neater in syntax
+  #    (ie, no need for anonymous functions)
+
+    JU <- function(URL) { 
+    # Wrapper for fromJSON + getURL
+      fromJSON(getURL(URL))
+    }
+
+    JR <- function(raw) { 
+      fromJSON(rawToChar(raw))
+    }
+
+    getNode <- function(NODE.Number, JSON=TRUE) { 
+    # Wrapper for getting node from api
+      html <- getURL(as.path(u.node, NODE.Number))
+
+      if (JSON)
+        return(fromJSON(html))
+      return(html)
+    }
+#------------------------------------------------------------------#
+
 
 
 # ------------------------------------------- #
@@ -200,7 +259,6 @@ parseNumberFromOutput <- function(U) {
 
 ##  THE FOLLOWING FUNCTION DELETES ALL NODES
 ##  There is a safety bool that must be set to TRUE in order for the delete to occur
-deleteALL.allowed <- FALSE
 deleteAllNodes <- function(verbose=TRUE)  { 
 # this is handy when setting things up. 
 
@@ -276,7 +334,7 @@ getAllRelIDsFromNodes <- function(nodes=getAllNodeIDs(retVec=TRUE), BiDirectiona
 
   QRY <- paste0("START n=node({startNodes}) MATCH n-[r]-", ifelse(BiDirectional, "", ">"), " friend RETURN ID(r)")
   PARAMS<- list(startNodes=nodes)
-  ret <- CypherQry(allRelIDs.cyp, PARAMS)
+  ret <- CypherQry(QRY, PARAMS)   # TODO:  I had <<  CypherQry(allRelIDs.cyp, PARAMS)  >>  Not Sure what allRelIDs.cyp was meant to be?
   setnames(ret, "NodeID")
 
   if (retVec)
@@ -333,11 +391,8 @@ deleteRelationship <- function(REL.Number, force=FALSE, verbose=TRUE) {
     return(NULL)
 }
 
-getAllRelIDsFromNodes(force=TRUE, retVec=TRUE)
-
-deleteALL.allowed <- FALSE
 deleteAllRelationships <- function()  { 
-# this is handy when setting things up. 
+# this functino is handy for when first setting things up. 
 
   if (!deleteALL.allowed) {
     stop("Delete All Not Allowed.\nPlease change `deleteALL.allowed` to TRUE: \n\n\tdeleteALL.allowed <- TRUE\n\n")
@@ -478,10 +533,13 @@ CypherQry <- function(QRY, PARAMS="", dontParse=FALSE, retDF=TRUE)  {
 
 
 
-set.seed(1); DT.Rel.Concs.artist.played_at.venue[1e3 + sample(1e5, 10)] -> DTSample.rels
-row <- DTSample.rels[1]
-props.list <- as.list(row[, 3:4])
-names(props.list) <- names(row)[3:4]
+## THIS IS FOR SAMPLING DATA
+#x   set.seed(1); DT.Rel.Concs.artist.played_at.venue[1e3 + sample(1e5, 10)] -> DTSample.rels
+#x   row <- DTSample.rels[1]
+#x   props.list <- as.list(row[, 3:4])
+#x   names(props.list) <- names(row)[3:4]
+
+
 
 # -------------------------- ## -------------------------- ## -------------------------- #
 

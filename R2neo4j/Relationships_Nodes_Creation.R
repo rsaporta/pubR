@@ -5,11 +5,21 @@
 SOURCEGRP <- "Concs"
 
 
+#  6-20-2013
+# Note To Self.  I am not sure what CAmerged was.  Search for it on home system. 
+# I think it was Concs or some derivative  (as in merging CAconcerts with venues)
+#  also, remember that the term Concs, I was using to distinguish from SongKick
+CAmerged <- Concs  # shallow copy
+CAVenueGeo <- Concs
+
+## OPTIONAL: 
+Concs[, venue := venueCleanUp(venue)]
+Concs[, artistName := basicArtistNameCleanUp(artistName)]
 
 
-
-
-
+## TODO: Conceivably, NODE.TYPES, ID.prfx, ID.digs could change `artist=artist` to `artistName=artist`
+##       my only concern is if there is anywhere else that is refering to it as artist instead of artistName
+setnames(Concs, "artistName", "artist")
 
 # ------------------------------------ #
 #               EXAMPLE                #
@@ -33,7 +43,7 @@ SOURCEGRP <- "Concs"
   #  That is, the   name   of the element corresponds to the column name in R   #
   #           the   value  of the element corresponds to the neo4j node type    #
 
-    NODE.TYPES <-  c(artist="artist", venue="venue", city="city", 
+    NODE.TYPES <-  c(artist="artist", venue="venue", city="city",                                 
                        state="state", country="country")
   #                                                                             #
   # --------------------------------------------------------------------------- #
@@ -57,31 +67,30 @@ SOURCEGRP <- "Concs"
   RELS.DT.Maker.list <- strsplit(c("artist,played_with,artist", "artist,played_at,venue", "venue,is_in,city", "city,is_in,state", "state,is_in,country"), ",")
   RELS.DT.Names      <- sapply(RELS.DT.Maker.list, function(R) do.call(mkDTRelName, as.list(c(R, SOURCEGRP))))
 
-# set to TRUE for debugging
-keep.names <- FALSE
+  # set to TRUE for debugging
+  keep.names <- FALSE
 
-# DT.Rel.Concs.artist.played_with.artist
-getRelationsWithinColumnByKey(CAmerged, "artist", "played_with", by=c("concertID", "concertDate"), sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
+  # DT.Rel.Concs.artist.played_with.artist
+  getRelationsWithinColumnByKey(CAmerged, "artist", "played_with", by=c("concertID", "concertDate"), sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
 
-# DT.Rel.Concs.artist.played_at.venue
-getRelationsFromRows(CAmerged, "artist", "played_at", "venue", sourceGrp=SOURCEGRP, include=list("concertID", "concertDate"), keep.names=keep.names, verbose=TRUE)
+  # DT.Rel.Concs.artist.played_at.venue
+  getRelationsFromRows(CAmerged, "artist", "played_at", "venue", sourceGrp=SOURCEGRP, include=list("concertID", "concertDate"), keep.names=keep.names, verbose=TRUE)
 
-# DT.Rel.Concs.venue.is_in.city
-getRelationsFromRows(CAVenueGeo, "venue", "is_in", "city", sourceGrp=SOURCEGRP, add=list(source="Concs"), keep.names=keep.names, verbose=TRUE)
+  # DT.Rel.Concs.venue.is_in.city
+  getRelationsFromRows(CAVenueGeo, "venue", "is_in", "city", sourceGrp=SOURCEGRP, add=list(source="Concs"), keep.names=keep.names, verbose=TRUE)
 
-# DT.Rel.Concs.city.is_in.state
-getRelationsFromRows(CAVenueGeo, "city", "is_in", "state", sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
+  # DT.Rel.Concs.city.is_in.state
+  getRelationsFromRows(CAVenueGeo, "city", "is_in", "state", sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
 
-# DT.Rel.Concs.state.is_in.country
-getRelationsFromRows(CAVenueGeo, "state", "is_in", "country", sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
-
+  # DT.Rel.Concs.state.is_in.country
+  getRelationsFromRows(CAVenueGeo, "state", "is_in", "country", sourceGrp=SOURCEGRP, keep.names=keep.names, verbose=TRUE)
 # ------------------------------------------------------- #
 
 
   # -------------------------------------------------------------------------------------------- #
   #                                                                                              #
   #                                  THESE ARE THE FINAL TABLES                                  #
-
+  #                        BEING COMBINED FROM ALL THE TABLES CREATED ABOVE                      #
 
         # COLLAPSE THE MULTIPLE DT's INTO A SINGLE NODES TABLE & A SINGLE RELS TABLE
         # ---------------------------------------------------------------------------------- #

@@ -57,11 +57,13 @@
 
 
 ## EG: 
-#  output <- batchCreateNodesAndRels(NODES.DT, RELS.DT)
+#  output <- batchCreateNodesAndRels(NODES.DT, RELS.DT, save.content.objs=TRUE)
+#   OR turn on Stream ing for troubleshooting
+#  output <- batchCreateNodesAndRels(NODES.DT, RELS.DT, stream=TRUE, save.content.objs=TRUE)
 
 
                                                         # these other arguments are less important right now. 
-batchCreateNodesAndRels <- function(NodesDT, RelsDT,  nodes.idcol="node", addSerialNumberToRels=TRUE, verbose=TRUE, stream=FALSE) { 
+batchCreateNodesAndRels <- function(NodesDT, RelsDT,  nodes.idcol="node", addSerialNumberToRels=TRUE, verbose=TRUE, stream=FALSE, save.content.objs=FALSE, save.output.to.global=TRUE) { 
 # TODO:  Explore passing the name of the DT. Will this save efficiency (memory or time)?
 
 
@@ -72,8 +74,36 @@ batchCreateNodesAndRels <- function(NodesDT, RelsDT,  nodes.idcol="node", addSer
     RelsDT[, rel.id := (1:.N) + starting.serial]
   }
 
-  content.nodes <- batchMethodsForNodes(NodesDT, idcol=nodes.idcol, verbose=verbose)
-  content.rels  <- batchMethodsForRels(RelsDT, verbose=verbose)
+  # Creating these two objects (Specifically content.rels) is very costly.  Thus, once complete, save to memory (outside this function) if user flagged this option. 
+  #  Also, if flag is on, check first if object exists. 
+  if (save.content.objs) {
+  
+    # Check if it exists already, if so load it. If not, create it, then save it. 
+    if (exists("content.nodes", envir=.GlobalEnv)) {
+      content.nodes <- get("content.nodes", envir=.GlobalEnv)
+    } else{
+      content.nodes <- batchMethodsForNodes(NodesDT, idcol=nodes.idcol, verbose=verbose)
+      assign("content.nodes", content.nodes, envir=.GlobalEnv)
+      if (verbose)
+        cat("Saved `content.nodes` to .GlobalEnv")
+    }
+
+    # Check if it exists already, if so load it. If not, create it, then save it. 
+    if (exists("content.rels", envir=.GlobalEnv)) {
+      content.rels <- get("content.rels", envir=.GlobalEnv)
+    } else{
+      content.rels <- batchMethodsForRels(RelsDT, verbose=verbose)
+      assign("content.rels", content.rels, envir=.GlobalEnv)
+      if (verbose)
+        cat("Saved `content.rels` to .GlobalEnv")
+    }
+  
+  # If user did not flag to save, then just create as normal.  [Note, these are the only two lines that are actually needed, except for the extra lines for backup and recovery]  
+  }  else {
+    content.nodes <- batchMethodsForNodes(NodesDT, idcol=nodes.idcol, verbose=verbose)
+    content.rels  <- batchMethodsForRels(RelsDT, verbose=verbose)
+  }
+
 
   # verbose output for troubleshooting
   if (verbose) {
@@ -94,7 +124,7 @@ batchCreateNodesAndRels <- function(NodesDT, RelsDT,  nodes.idcol="node", addSer
   H.post  <- getURL(u.batch, httpheader = c(jsonHeader, streamOn), postfields = content)
 
   # incase user forgot to assign the output to an object, we dont want the handle to just dissappear. 
-  if (saveToGlobal) {
+  if (save.output.to.global) {
     saveTo <- paste0("LastBatchCreate.", what)
     assign(saveTo, H.post, envir=.GlobalEnv)
     cat("Neo4j response saved to\n  `", saveTo, "`\n", sep="")
