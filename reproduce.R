@@ -117,6 +117,9 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
     rows  <- 10
   }
 
+  ## CHECK IF LIST
+#  if(is.list())
+
   # check that rows & cols do not exceed the dims.  If so, scale them back
   #------------------------
     # check that x has dim
@@ -227,9 +230,12 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
 
   ## GRAB THE DPUT
   z <- capture.output(dput(x))
+  ## remove white space, just because it takes up room
+  z <- gsub("^\\s+|\\s+$", "", z)
+  # collapse it all into a single string
   z <- paste(z, collapse="")
 
-
+  
   # data.table: 
   if (is.data.table(x)) {
 
@@ -237,15 +243,16 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
     k  <- key(x)
     ky <- if (is.null(k)) "" else paste0(", key='", paste(k, collapse=","), "'")
 
-
-    # remove the pointer
-    pattern <- ", .internal.selfref = <pointer: .*>"
-    z <- gsub(pattern, "", z)
+    # enclose in data.table
     z <- paste0("data.table(", z, ky, ")")
   }
 
   ## this is the final output
   ret <- paste0(name, " <- ", z)
+
+  # remove pointer info (specific to data.table, but might be caught in a list)
+  pattern <- ", \\.internal\\.selfref \\= <pointer\\: [a-zA-Z0-9]{8,12}>"
+  ret <- gsub(pattern, "", ret)
 
   # if on Mac OSX and flagged to true, then copy to clipboard
   if(clipboard &&  Sys.info()[['sysname']] == "Darwin") {
