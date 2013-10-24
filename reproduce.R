@@ -73,6 +73,18 @@
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 # -------------------------------------------------------------------------------------------------------------------------------------------- #
 
+# ## Update Oct 2013: 
+# argument `lines.out` has been added. 
+# The user can specify the total number of lines that the output should be broken up into
+# The function attempts to add line breaks at logical points, but this is purely a buest guess based on regex. 
+# 
+# example:   reproduce(DF, lines.out=4)
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+
+
+
 
 
 
@@ -89,7 +101,9 @@
 ## if on  Mac OS X, the output will be automaticall copied to the clipboard 
 ##    ie, just run the function, then hit CMD+v  in your text editor or website.
 
-reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE, shuffle=FALSE, name=NA, verbose=!silent, silent=FALSE, pos=1) { 
+reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
+                      , shuffle=FALSE, name=NA, verbose=!silent, silent=FALSE, pos=1
+                      , lines.out=1) { 
 # If rows is a single number, then that is *how many* rows will be selected
 # If rows is a vector of numbers, then that is *which rows* will be selected
 # Same for cols.  Note, vlaue can be integer or character
@@ -254,6 +268,24 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
   pattern <- ", \\.internal\\.selfref \\= <pointer\\: [a-zA-Z0-9]{8,12}>"
   ret <- gsub(pattern, "", ret)
 
+  ## Chops the output into lines.  Attempts to break lines at reasonable points
+  ##   Also indents subsequent lines to match up after the `<-`, assuming the data name
+  ##    is less than 32 chars long
+  if (lines.out > 1 && nchar(ret) > 125) {
+    nc.start <- 2+regexpr("<\\-", ret)[[1]]
+    if (nc.start > 35)
+      nc.start > 0
+    nc <- nchar(ret) - nc.start
+    widths <- (nc / lines.out)
+
+    for (i in seq(lines.out-1))
+      ret[i:(i+1)] <- 
+         chopLine(ret[i], width=widths, flex=widths, splitOn = "\\), \\w+ = ", maxNumberOfBreaks=1L, collapse=NULL, padToSecondSpace=FALSE)
+
+    ret[2:length(ret)] <- paste0(pasteR(" ", nc.start), ret[2:length(ret)])
+    ret <- paste(ret, collapse="\n")
+  }
+
   # if on Mac OSX and flagged to true, then copy to clipboard
   if(clipboard &&  Sys.info()[['sysname']] == "Darwin") {
     con <- pipe("pbcopy", "w")
@@ -277,5 +309,115 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE,
 
   # also return invisibly
   return(invisible(name))
+}
+
+
+
+# ------------------------------------------------------ #
+
+## Utils functions 
+
+## These functions are normally kept in another file. Hence only source them from here if absent
+if (!exists("chopLine")) {
+
+ chopLine <- function(line, collapse="\n", width=88L, flex=15L
+                                , padding=0L, maxNumberOfBreaks=2L, dotsBeyondMax=FALSE
+                                , padToSecondSpace=FALSE
+                                , trimSpace=TRUE
+                                , showWarnings=TRUE
+                                , splitOn="\\s+") {
+   ## Takes a line of text and breaks it up into width
+    if (!is.atomic(line) || length(line) > 1)
+      stop ("`line` should be an atomic vector of length exactly 1.")
+
+    if (!length(line) || nchar(line) < width)
+      return(line)
+
+    if (padToSecondSpace) {
+      if (is.character(padding)) {
+            warning("`padding` given explicitly as a string, but `padToSecondSpace` is set to TRUE.\nThis will overwrite `padding`.")
+            padding <- 0
+        }
+        # find the first letter of the second word. Then go back one space from there. (We want the END of the second space)
+        secondspace <- attr(regexpr("(\\s*)([^\\s]+)(\\s+)([^\\s])", line, perl=TRUE), "match.length")[[1]] - 1
+        padding <- max(secondspace, padding)
+    }
+
+    if (is.numeric(padding))
+      padding <- pasteR(" ", padding)
+
+    ## NOTE dont pre allocate. Otherwise would then need to check for blank lines.
+    ret <- line
+
+    # dont chop if maxNumberOfBreaks==0
+    if (maxNumberOfBreaks)
+      for (i in seq.int(maxNumberOfBreaks)) {
+        ## only continue if enough chars
+        if (nchar(ret[[i]]) < width + (.6*flex))
+          break
+
+        spaces <- findCharBetween(ret[[i]], char.to.find=splitOn, from=width-(3*flex), to=width+(4*flex))
+        if (!length(spaces))
+          bk <- width
+        else 
+          bk <- spaces[which.min(abs(spaces - width))]
+        current <- substr(ret[[i]], 1, bk-1)
+        new     <- substr(ret[[i]], bk+1, nchar(ret[[i]]))
+
+        # add a hyphen if mid-work break
+        if (!length(spaces))
+          current <- paste0(current, "-")
+
+        # clean whitespace
+        if (trimSpace)
+          new <- gsub("^\\s+", "", new)
+
+        ret[[i]]   <- current
+        ret[[i+1]] <- paste0(padding, new)
+      }
+
+    ## add dots
+    L <- length(ret)
+    if (dotsBeyondMax && nchar(ret[[L]]) > width) {
+      ret[[L]] <- paste0(substr(ret[[L]], 1, width-3), " ...")
+    }
+
+    return(paste(ret, collapse=collapse))
+  }
+
+
+}
+
+if (!exists(pasteR))  {
+
+  pasteR <- function(x="-", n) {
+  ## Repeats x n-times in a flat string
+  ##  When n is non-positive, a blank string, "", is returned
+  
+
+    ## allow for `pasteR(n)`
+    if (missing(n) && is.numeric(x)) {
+      n <- x
+      x <- "-"
+    }
+
+    # if n is not a single number, iterate
+    if (length(n) > 1) {
+      if (length(n) == length(x))
+        return(mapply(pasteR, x, n))
+      return( sapply(n, function(n1) pasteR(x, n1)) )
+    }
+
+    # use the chararacter length of n, if it is a string
+    if(is.character(n))
+      n <- nchar(n)
+
+    # Negative values are considered 0. 
+    n[n<0] <- 0
+
+    # otehrwise, simple return
+    pasteC(rep(unlist(x), n))
+  }
+
 }
 
