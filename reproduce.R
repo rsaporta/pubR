@@ -268,7 +268,9 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
   pattern <- ", \\.internal\\.selfref \\= <pointer\\: [a-zA-Z0-9]{8,12}>"
   ret <- gsub(pattern, "", ret)
 
+  ## ---   SPLIT THE OUTPUT INTO MULTIPLE LINES ---- ## 
   ## Chops the output into lines.  Attempts to break lines at reasonable points
+  ##  First looks for names(x), if available. Otherwise uses regex. 
   ##   Also indents subsequent lines to match up after the `<-`, assuming the data name
   ##    is less than 32 chars long
   if (lines.out > 1 && nchar(ret) > 125) {
@@ -278,9 +280,19 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
     nc <- nchar(ret) - nc.start
     widths <- (nc / lines.out)
 
-    for (i in seq(lines.out-1))
-      ret[i:(i+1)] <- 
-         chopLine(ret[i], width=widths, flex=widths, splitOn = "\\), \\w+ = ", maxNumberOfBreaks=1L, collapse=NULL, padToSecondSpace=FALSE)
+    # where to split the output
+    splitOn <- if (!is.null(names(x))) regOr(paste0(" ", names(x))) else "\\), \\w+ = "
+    splitOn2 <- "\\s+"  ## basic whiteSpace. Dangerous, since might be in between spaces. 
+
+    for (i in seq(lines.out-1)) {
+      prev <- ret[[i]]
+      ret[i:(i+1)] <- chopLine(ret[i], width=widths, flex=widths+20, splitOn=splitOn, maxNumberOfBreaks=1L, collapse=NULL, showWarnings=FALSE, padToSecondSpace=FALSE, dropTrimmedSpace=FALSE)
+      ## if not chopped, try `splitOn2`
+      if (identical(prev, ret[[i]]))
+         ret[i:(i+1)] <- chopLine(ret[i], width=widths, flex=widths+20, splitOn=splitOn2, maxNumberOfBreaks=1L, collapse=NULL, showWarnings=FALSE, padToSecondSpace=FALSE, dropTrimmedSpace=FALSE)
+      if (identical(prev, ret[[i+1]]))
+         ret[[i+1]] <- ""
+    }
 
     ret[2:length(ret)] <- paste0(pasteR(" ", nc.start), ret[2:length(ret)])
     ret <- paste(ret, collapse="\n")
@@ -315,9 +327,20 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
 
 # ------------------------------------------------------ #
 
-## Utils functions 
 
-## These functions are normally kept in another file. Hence only source them from here if absent
+
+# ---------------------------------------------------------- #
+#                                                            #
+#                UTILS & SUPPORT FUNCTIONS                   #
+#                                                            #
+# ---------------------------------------------------------- #
+
+
+## These functions are normally kept in another file. 
+#  Hence only source them from this file if they are absent
+#   ie, before every function there is a `if(!exists(..))` 
+
+
 if (!exists("chopLine")) {
 
   chopLine <- function(line, collapse="\n", width=88L, flex=15L
@@ -325,13 +348,21 @@ if (!exists("chopLine")) {
                                 , padToSecondSpace=FALSE
                                 , trimSpace=TRUE
                                 , showWarnings=TRUE
-                                , splitOn="\\s+") {
+                                , splitOn="\\s+", dropTrimmedSpace=TRUE) {
   ## Takes a line of text and breaks it up into width
     if (!is.atomic(line) || length(line) > 1)
       stop ("`line` should be an atomic vector of length exactly 1.")
 
     if (!length(line) || nchar(line) < width)
       return(line)
+
+    ## if the split value is not present within the range, return the original value
+    if (!grepl(splitOn, substr(line, width-flex, width+flex))) {
+      if (showWarnings) {
+        warning("Could not find pattern '", splitOn, "within the designated character range (", width , " +/- ", flex," chars)\n")
+      }
+      return(line)
+    }
 
     if (padToSecondSpace) {
       if (is.character(padding)) {
@@ -361,8 +392,9 @@ if (!exists("chopLine")) {
           bk <- width
         else 
           bk <- spaces[which.min(abs(spaces - width))]
-        current <- substr(ret[[i]], 1, bk- (splitOn=="\\s+") )  # if not splitting on space, do not remove it
-        new     <- substr(ret[[i]], bk+1, nchar(ret[[i]]))
+        current <- substr(ret[[i]], 1, bk-1)
+        pushIt   <- ifelse(dropTrimmedSpace && splitOn=="\\s+", 1, 0)  # if not splitting on space, do not remove it
+        new     <- substr(ret[[i]], bk+pushIt, nchar(ret[[i]]))
 
         # add a hyphen if mid-work break
         if (!length(spaces))
@@ -384,6 +416,38 @@ if (!exists("chopLine")) {
 
     return(paste(ret, collapse=collapse))
   }
+
+
+  findCharBetween <- function(string, char.to.find=" ", from=1, to=nchar(string)) {
+    if (length(string) > 1 || length(char.to.find) > 1 || length(to) >1 || length(from) >1)
+      stop ("all arguments must be length 1")
+
+    if (!length(string) || !length(char.to.find))
+      stop ("No valid string submitted")
+
+    found <- gregexpr(char.to.find, string)[[1]]
+    inds <- found > from & found < to
+
+    found[inds]
+  }
+
+  findFirstCharBetween <- function(string, char.to.find=" ", from=1, to=nchar(string), findLAST=FALSE) {
+    ## TODO: Incorporate findCharBetween 
+    if (length(string) > 1 || length(char.to.find) > 1 || length(to) >1 || length(from) >1)
+      stop ("all arguments must be length 1")
+
+    if (!length(string) || !length(char.to.find))
+      stop ("No valid string submitted")
+
+    found <- gregexpr(char.to.find, string)[[1]]
+    inds <- found > from & found < to
+
+    if (findLAST)
+      max(found[inds])
+    else 
+      min(found[inds])
+  }
+
 }
 
 
@@ -420,3 +484,40 @@ if (!exists("pasteR"))  {
 
 }
 
+if (!exists("regOr")) {
+
+  regOr <- function(vec, brackets=TRUE, asterisk=NULL, escape=FALSE, whole=FALSE, whitespace=FALSE) { 
+  # combines a string vector into a regex `or` statement
+
+    if (whole && !brackets) {
+      warning("Cannot use whole without brackets. Please add `^` `$` anchors manually")
+    }
+
+    if (escape)  {
+        vec <- glob2rx(vec)
+        vec <- substr(vec, 2, nchar(vec)-1)
+        vec <- gsub("\\)", "\\\\)", vec)
+    }
+
+    # ws will be pasted.  If not grabbing whitespace, make this NULL
+    ws <- if (whitespace) "\\s*" else NULL
+
+    # The main string to return 
+    ret <- paste0(ws, c(vec), ws, collapse="|")
+
+    # If not adding brackets, then we're all set. 
+    if (!brackets)
+      return(paste0(ret, asterisk))
+
+    # else return
+    ret <- paste0("(", ret, ")", asterisk, collapse="")
+
+    if (whole) {
+      # Two separate lines to combat vectorization of paste
+      ret <- paste0("^", ret)
+      ret <- paste0(ret, "$")
+    } 
+
+    return(ret)
+  } 
+}
