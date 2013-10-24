@@ -320,13 +320,13 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
 ## These functions are normally kept in another file. Hence only source them from here if absent
 if (!exists("chopLine")) {
 
- chopLine <- function(line, collapse="\n", width=88L, flex=15L
+  chopLine <- function(line, collapse="\n", width=88L, flex=15L
                                 , padding=0L, maxNumberOfBreaks=2L, dotsBeyondMax=FALSE
                                 , padToSecondSpace=FALSE
                                 , trimSpace=TRUE
                                 , showWarnings=TRUE
                                 , splitOn="\\s+") {
-   ## Takes a line of text and breaks it up into width
+  ## Takes a line of text and breaks it up into width
     if (!is.atomic(line) || length(line) > 1)
       stop ("`line` should be an atomic vector of length exactly 1.")
 
@@ -361,7 +361,7 @@ if (!exists("chopLine")) {
           bk <- width
         else 
           bk <- spaces[which.min(abs(spaces - width))]
-        current <- substr(ret[[i]], 1, bk-1)
+        current <- substr(ret[[i]], 1, bk- (splitOn=="\\s+") )  # if not splitting on space, do not remove it
         new     <- substr(ret[[i]], bk+1, nchar(ret[[i]]))
 
         # add a hyphen if mid-work break
@@ -384,11 +384,10 @@ if (!exists("chopLine")) {
 
     return(paste(ret, collapse=collapse))
   }
-
-
 }
 
-if (!exists(pasteR))  {
+
+if (!exists("pasteR"))  {
 
   pasteR <- function(x="-", n) {
   ## Repeats x n-times in a flat string
