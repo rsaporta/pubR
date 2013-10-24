@@ -144,9 +144,34 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
       # check if `rows` exceeds rows(x)
       if (rows > d[[1]])
         rows <- d[[1]]
-      # check if x has cols, and `cols` has been set and `cols` exceeds cols(x)
-      if (length(d) > 1 && !is.na(cols) && cols > d[[2]])
+
+      if (length(d)==2 && whole)
         cols <- d[[2]]
+
+      # check if `cols` exceeds the number of cols in x (if x has cols)
+      if (length(d) > 1 && !is.na(cols) && is.numeric(cols) && all(cols >= d[[2]]))
+        cols <- d[[2]]
+
+      ## error check
+      if (is.numeric(cols)) {
+        if (any(cols > d[[2]])) {
+          if (showWarnings)
+             warning ("some values of `cols` are not valid. Don't worry, they'll be ignored.")
+          cols <- cols[cols < d[[2]]]
+        }
+      } else if (is.character(cols)) {
+        if (!all(cols %in% names(x))) {
+          if (showWarnings)
+             warning ("some values of `cols` are not valid. Don't worry, they'll be ignored.")
+          cols <- cols[cols %in% names(x)]
+        }        
+      }
+      ## check if there are any valid values in cols
+      if (!length(cols)) {
+        if (showWarnings)
+          warning("It appears that `cols` has *no* valid values. Don't worry, we will sample all columns.")
+        cols <- d[[2]]
+      }
     }
 
   ## SAMPLE THE ROWS
@@ -191,7 +216,7 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
   }
 
   # select only certian columns, assuming cols specified and x has dimension
-  if (!missing(cols) && !is.na(cols) & length(d)) {
+  if (!missing(cols) && !is.na(cols) && length(d)) {
     if (is.numeric(cols) && length(cols)==1) {
 
       if (cols > d[[2]])
@@ -199,6 +224,7 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
       
       cols <- seq(cols)
     }
+
     if (is.data.table(x)) {      
       x <- x[, cols, with=FALSE]
     } else if (length(d) > 2) {
@@ -482,7 +508,7 @@ if (!exists("pasteR"))  {
     n[n<0] <- 0
 
     # otehrwise, simple return
-    pasteC(rep(unlist(x), n))
+    paste(rep(unlist(x), n), collapse="")
   }
 
 }
