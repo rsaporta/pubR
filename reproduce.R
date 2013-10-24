@@ -123,6 +123,9 @@ reproduce <- function(x, rows=10, head=NA, cols=NA, clipboard=TRUE, whole=FALSE
   }
   d <- dim(x)
 
+  ## the data.table package may not be loaded, hence this function might be missing
+  if (!exists("is.data.table"))
+    is.data.table <- function(x) inherits(x, "data.table")
 
   # allows for the call `reproduce(x, whole)` and setting whole to TRUE and rows to default. 
   w <- tolower(if(length(mc) >2) as.character(mc[[3]]) else (NA))
