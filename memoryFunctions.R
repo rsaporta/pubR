@@ -26,7 +26,6 @@
 # .ls.objects was adapted from Petr Pikal and David Hinds via Dirk Eddelbuettel
 # http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 
-
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
 .ls.objects <- function (pos = 1, pattern, order.by, decreasing=FALSE, head=FALSE, n=5, type="", all.names = FALSE, ignore.case=TRUE) {
@@ -116,7 +115,8 @@
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB=TRUE
                   , type="", all.names = FALSE, showfuncs=FALSE, byteMin=b
-                  , b=1000, mb=NA, ignore.case=TRUE, functions.returned.normally=FALSE) {
+                  , b=1000, mb=NA, ignore.case=TRUE, functions.returned.normally=FALSE
+                  , copy=FALSE) {
 # shorthand wrapper to .ls.objects
 # cleaner output and uses data.table if available
 #
@@ -128,16 +128,38 @@ lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB
   # for if statement later
   byteMinMissing <- missing(byteMin)
 
+  oneKB <- 1024
+  oneMB <- 1048576
+  oneGB <- 1073741824
+
   if (!missing(mb))
     byteMin <- mb * 1e6
 
   if(missing(type) && !showfuncs)
     type <- "!function"
 
+  ## To avoid errors when sys.call()[[n]] is out of bounds
+  L.sc <- length(sys.call())
+  .sc <- function(n) n <= L.sc
+
+  # ------------------------------------------ #
+  #    Allow for lsos(funcname, f, c)          # 
+  # ------------------------------------------ #
+  if (.sc(3) && as.character(sys.call()[[3]]) == "f") {
+      type <- "function"
+      order.by <- "Name"
+  }
+  if (missing(copy) && .sc(4) && identical(tolower(as.character(sys.call()[[4]])), "c")) {
+    copy <- TRUE
+    decreasing <- TRUE
+    if (identical(substitute(order.by), sys.call()[[4]]))
+      order.by <- "Size"  ## if type was 'f', order.by would have already been changed
+  }
+
   # ------------------------------------------ #
   #    Allowing for flexibility in order.by    #
   # ------------------------------------------ #
-  if(!missing(order.by)) {
+  if (!missing(order.by)) {
     # Check if order.by can be coerced to character. If not, then substitute its value. (If that still fails, R will throw an error.)
     if (isErr(order.by.new <- try(as.character(order.by), silent=TRUE)))
       order.by <- as.character(substitute(order.by))
@@ -153,13 +175,17 @@ lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB
 
   # ------------------------------------------ #
   # This allows for calls such as lsos("check", f) "show all functions with the name check"
-  if (order.by == "F" || substr(order.by, 1, 3) == "Fun") {
+  if (tolower(order.by) == "f" || tolower(substr(order.by, 1, 3)) == "fun") {
     order.by <- "Name"
     type <- "function"
   }
 
   # ------------------------------------------ #
-  if(!missing(type)) {
+  if (!missing(type)) {
+    # allow for `t=f`
+    if (as.character(substitute(type)) == "f")
+      type <- "function"
+    # otherwise: 
     # Check if type can be coerced to character. If not, then substitute its value. (If that still fails, R will throw an error.)
     if (isErr(type.new <- try(as.character(type), silent=TRUE)))
       type <- as.character(substitute(type))
@@ -167,7 +193,15 @@ lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB
       type <- type.new
   }
 
-  if (missing(order.by) && tolower(type) %in% c("f", "fun", "func", "functions", "function")) {
+  # ------------------------------------------ #
+  #   FLEXIBILITY IN c=T
+  # ------------------------------------------ #
+
+  if (!missing(copy) && identical(toupper(as.character(match.call()[["copy"]])), "T")) {
+    copy <- TRUE
+  }
+
+  if ((missing(order.by) && tolower(type) %in% c("f", "fun", "func", "functions", "function")) || is.null(order.by)) {
     order.by <- "Name"
   }
 
@@ -198,6 +232,9 @@ lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB
     # else, do nothing  
   }
 
+  ## Allow for `type=bool` and `type=boolean` in the function call
+  if (substr(tolower(type), 1, 4) == "bool")
+    type <- "logical"
 
   out <- .ls.objects(pattern=pattern, order.by=order.by, n=n, type=type, decreasing=decreasing, all.names=all.names, head=!missing(n), ignore.case=ignore.case)
 
@@ -254,10 +291,13 @@ lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB
     names(out)[names(out) == "Size"] <- "KB"    
   }
 
+  if (copy && exists("clipCopy"))
+    clipCopy(rownames(out))
+
   # if returning only function, return that as a vector, to show them all
   if (all(out[, "Type"] == "function") && !functions.returned.normally)
-    return( invisible(print(rownames(out)[order(toupper(rownames(out)))], quote=FALSE))  )
-
+      return(invisible(  cat("", paste_l(rownames(out)[order(toupper(rownames(out)))], spacer="  \t" ))  ))
+  
   if (!exists("data.table"))
     return(out)
   # else
@@ -265,6 +305,54 @@ lsos <- function(pattern="", order.by="Size", decreasing=TRUE, n=10, MB=TRUE, KB
 }
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
+.myf <- function (funcname, copy=TRUE, envir=.GlobalEnv, quiet=FALSE) {
+## finds a function matching funcname and copies it to clipboard
+##  while also outputting other possible matches
+## eg: `.myf(mkQ)` to find `makeQuery` 
+
+  funcname <- as.character(substitute(funcname))
+  force(envir)
+
+  # ret <- lsos(type="f", copy=FALSE, all.names=TRUE, b=1, functions.returned.normally=TRUE)
+  Names <- nwhich(sapply(ls(envir=envir, all.names=TRUE), function(x) is.function(get(x))))
+
+  searchpat_01 <- paste0("^", funcname)
+  searchpat_02 <- funcname
+  searchpat_03 <- paste(strsplit(funcname, "")[[1]], collapse="(.{1,2})")  # one or two letters between 
+  searchpat_all <- paste(strsplit(funcname, "")[[1]], collapse="(.*)")      # any amount of letters in between 
+
+  ## so as to not have to search the whole list everytime
+  found <- grep(searchpat_all, Names, ignore.case=TRUE, value=TRUE)
+
+  results <- c()
+  searchpats <- list(searchpat_01, searchpat_02, searchpat_03)
+  for (pat in searchpats) {
+    l <- length(results)
+    for (TF in c(FALSE, TRUE))
+      results <- c(results, setdiff(grep(pat, found, ignore.case=TF, value=TRUE), results))
+    if (length(results) > l)
+      results <- c(results, "\n")
+  }
+  remaining <- setdiff(found, results)
+
+  if (!quiet) { 
+    columnise <- function(x) gsub("\\s*\\n\\s*", "\n", paste_l(x, spacer="   ", sameWidth=TRUE, cols=3))
+    out <- columnise(results)
+    out <- c(out, pasteR(66), columnise(remaining), "\n")
+    out <- paste0(gsub("^\\s*", "", out), collapse="\n")
+    out <- gsub("(^|\n)", "\\1  ", out)
+    cat("\n", out, "\n", sep="")
+  }
+
+  results <- unique(setdiff(   c(results, remaining)     ,"\n"))
+
+  if (copy && exists("clipCopy"))
+    clipCopy(results[[1L]])
+
+  return(invisible(results))
+}
+
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 listType <- function(L) { 
   are <- lapply(L, is)
 
@@ -295,3 +383,21 @@ formatKB <- function(x, MB=FALSE, MBthresh=600) {
   prettyNum(ret)
 }
 
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+
+if(!exists("isErr"))
+isErr <- function(expression)  {
+  #  Boolean; Tries to evaluate the expresion; returns T if an error is thrown
+  #  Args:
+  #    expression:  Make sure to use expression() to pass an expression (dont use Strings)
+  #  Returns:
+  #    T if expression throws an Error // F if expression is evaluated without error
+  #    NOTE:  The actual evaluation of the expression is NOT RETURNED
+  
+  return( inherits(try(eval(expression), silent=T), "try-error") )
+}
+
+if(!exists("topropper"))
+topropper <- function(x)
+    gsub("\\b([a-zA-Z])([a-zA-Z]+)", "\\U\\1\\L\\2", x, perl=TRUE)
