@@ -157,8 +157,8 @@ if (!exists("clipCopy"))
       if (undo.save && exists(".undo.bank"))
         .undo.bank()
 
-      # won't work on linux, etc
-      if(.Pfm=="Linux")
+      # Currently, this works only Mac OSX
+      if(Sys.info()[['sysname']] != "Darwin")
         return(txt)
 
       con <- pipe("pbcopy", "w")
